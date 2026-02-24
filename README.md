@@ -1,20 +1,24 @@
-# WordBin
+# WordBin – Encode words & short phrases into tiny, reversible binary
 
 ![npm](https://img.shields.io/npm/v/@bigdreamsweb3/wordbin) ![license](https://img.shields.io/npm/l/@bigdreamsweb3/wordbin) ![node](https://img.shields.io/node/v/@bigdreamsweb3/wordbin)
 
-**WordBin** is a deterministic, reversible word-to-binary encoder/decoder that compresses short human-readable phrases into tiny, predictable binary payloads.
+**WordBin** is a deterministic, reversible word-to-binary encoder/decoder that compresses short human-readable phrases into **tiny, predictable binary payloads**.
 
-Optimized for **Web3, blockchain, IoT, QR codes, and metadata storage**, WordBin ensures short sequences of words can be stored efficiently while remaining fully recoverable.
+Optimized for **Web3, blockchain, QR codes, IoT, URLs, and other space-sensitive applications**, WordBin ensures short sequences of words can be stored efficiently and recovered reliably.
+
+**npm description (for publishing):**
+
+> Deterministic word-to-binary encoder: compress short phrases for blockchain, Web3, IoT, QR codes, or space-sensitive storage.
 
 ---
 
 ## Why WordBin
 
-- Compresses **short phrases** (crypto recovery seeds, tags, keywords) into 2–4 byte IDs per word.
-- Fully **deterministic & collision-safe**: same dictionary = same encoding.
-- Minimal payload size → ideal for **blockchain metadata, QR codes, NFC, and low-bandwidth IoT**.
-- Works in **Node.js & browser**. No runtime dependencies required for browser usage.
-- Bundled small dictionary (BIP-39) + optional large/custom dictionaries.
+- Compress short phrases (crypto seeds, tags, keywords) into **2–4 byte IDs per word**.
+- Fully **deterministic & collision-safe** — same dictionary = same encoding.
+- Minimal payload → perfect for **blockchain metadata, NFC/QR codes, and low-bandwidth IoT**.
+- Works in **Node.js & browser**, no runtime dependencies.
+- Bundled **small dictionary (BIP-39)** with optional **large/custom dictionaries**.
 
 ---
 
@@ -24,7 +28,7 @@ Optimized for **Web3, blockchain, IoT, QR codes, and metadata storage**, WordBin
 npm install @bigdreamsweb3/wordbin
 ```
 
-> BIP-39 dictionary (v1) is included — ready to encode/decode immediately.
+> The small **v1 (BIP-39)** dictionary is included — ready to encode/decode immediately.
 
 ---
 
@@ -33,7 +37,8 @@ npm install @bigdreamsweb3/wordbin
 ```js
 import { WordBin } from "@bigdreamsweb3/wordbin";
 
-const wb = await WordBin.create(); // uses latest dictionary (v1 bundled, v2 if built)
+// Use latest dictionary (v1 bundled, v2 if built)
+const wb = await WordBin.create();
 
 const phrase = "abandon ability able about above";
 const encoded = await wb.encode(phrase);
@@ -51,14 +56,13 @@ console.log("Decoded:", decoded); // → "abandon ability able about above"
 ```html
 <script type="module">
   import { WordBin } from "https://esm.sh/@bigdreamsweb3/wordbin";
-
   const wb = await WordBin.create();
 </script>
 ```
 
 ---
 
-## CLI – Build Larger / Custom Dictionaries
+## CLI – Build Larger or Custom Dictionaries
 
 ```bash
 # Interactive mode
@@ -78,21 +82,21 @@ npx wordbin build --custom ./my-local-words.txt
 
 ## Dictionary Versions
 
-| Version | Filename              | Words | Source             | ID bytes | Best for                        |
-| ------- | --------------------- | ----- | ------------------ | -------- | ------------------------------- |
-| v1      | wordbin-v1-bip39.json | 2,048 | BIP-39 English     | ~2       | Crypto seeds, high reliability  |
-| v2      | wordbin-v2-dwyl.json  | ~466k | dwyl/english-words | 2–4      | General English, tags, keywords |
+| Version | Filename              | Words | Source             | ID bytes | Best for                                |
+| ------- | --------------------- | ----- | ------------------ | -------- | --------------------------------------- |
+| v1      | wordbin-v1-bip39.json | 2,048 | BIP-39 English     | ~2       | Crypto recovery seeds, high reliability |
+| v2      | wordbin-v2-dwyl.json  | ~466k | dwyl/english-words | 2–4      | General English, tags, keywords         |
 
-> **v2 note**: The dwyl list contains capitalized words. Encoding/decoding is case-sensitive. Normalize to lowercase if desired.
+> **v2 note**: The dwyl list contains capitalized words. Encoding/decoding is case-sensitive. Normalize to lowercase for case-insensitive behavior.
 
 ---
 
 ## How It Works
 
-1. Each word → SHA-256 → first N bytes (2–4) = deterministic ID.
+1. Each word → SHA-256 → first **2–4 bytes** = deterministic ID.
 2. Encoded payload: `[MAGIC_BYTES ('WB') | VERSION | WORD_IDS...]`
-3. Decoding uses the same dictionary to reverse IDs → original words.
-4. Optimized for **short sequences**, not full paragraphs.
+3. Decoding reverses IDs → original words using the same dictionary.
+4. Optimized for **short sequences**, not arbitrary long text.
 
 ---
 
