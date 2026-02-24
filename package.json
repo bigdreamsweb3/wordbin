@@ -1,0 +1,79 @@
+{
+  "name": "@bigdreamsweb3/wordbin",
+  "version": "0.1.0",
+  "description": "WordBin – Encode words & short text into tiny, reversible binary for storage, URLs, IoT, QR codes, metadata, blockchain, or Web3 apps.",
+  "author": "Agbaka Daniel Ugonna <99cratson@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/bigdreamsweb3/wordbin#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bigdreamsweb3/wordbin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bigdreamsweb3/wordbin/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "bin": {
+    "wordbin": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build",
+    "clean": "rimraf dist",
+    "prepack": "npm run build",
+    "dev": "vite",
+    "test": "vitest",
+    "publish": "npm publish --access public",
+    "release:patch": "npm run version:patch && npm run build && npm publish --access public",
+    "release:minor": "npm run version:minor && npm run build && npm publish --access public",
+    "release:major": "npm run version:major && npm run build && npm publish --access public"
+  },
+  "dependencies": {
+    "bip39": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "rimraf": "^6.0.1",
+    "rollup-plugin-copy": "^3.5.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8",
+    "vite-plugin-dts": "^4.2.1",
+    "vitest": "^2.0.5"
+  },
+  "keywords": [
+    "wordbin",
+    "compression",
+    "bip39",
+    "dictionary",
+    "binary",
+    "encoding",
+    "solana",
+    "ethereum",
+    "blockchain",
+    "nft",
+    "dapp",
+    "qr",
+    "nfc",
+    "iot"
+  ]
+}
