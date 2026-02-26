@@ -1,15 +1,16 @@
-// File: scripts\dictionaries\build-v2-dwyl.mjs
+// scripts/dictionaries/build-v2-dwyl.ts
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import https from "node:https";
+import { buildDictionary } from "../../src/dict/builder";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-async function fetchWordlist(url) {
-  return new Promise((resolve, reject) => {
+async function fetchWordlist(url: string) {
+  return new Promise<string[]>((resolve, reject) => {
     https
       .get(url, (res) => {
         if (res.statusCode !== 200) {
@@ -48,55 +49,29 @@ async function main() {
   const outDir = resolve(pkgRoot, "data");
   await mkdir(outDir, { recursive: true });
 
-  // Load your built library
-  const libPath = resolve(pkgRoot, "dist/index.js");
-  console.log("Trying to load library from:", libPath);
-  let lib;
-  try {
-    const libUrl = pathToFileURL(libPath).href;
-    lib = await import(libUrl);
-    console.log("Successfully imported library");
-  } catch (err) {
-    console.error(`Failed to load your library from ${libPath}`);
-    console.error(err);
-    process.exit(1);
-  }
+  // No dist loading anymore – we already imported buildDictionary directly
 
-  if (typeof lib.buildDictionary !== "function") {
-    throw new Error("Library does not export buildDictionary function");
-  }
-
-  // Fetch the large dwyl wordlist
   const wordlistUrl =
     "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt";
-  let words;
+  let words: string[] = [];
   try {
-    console.log(`Fetching large English wordlist (~466k–479k words)...`);
+    console.log(`Fetching large English wordlist …`);
     words = await fetchWordlist(wordlistUrl);
-  } catch (err) {
+  } catch (err: any) {
     console.error("Failed to download wordlist:", err.message);
     process.exit(1);
   }
 
-  // Optional: filter example (uncomment/adjust as needed)
-  // words = words
-  //   .filter(w => w.length >= 3 && /^[a-z]+$/i.test(w))  // only letters, min length 3
-  //   .map(w => w.toLowerCase());                         // normalize case
-  // console.log(`After filtering: ${words.length} words`);
-
-  console.log(
-    "Building dictionary (this may take a while with 466k+ words)...",
-  );
+  console.log("Building dictionary (this may take a while) …");
 
   let dict;
   try {
-    dict = await lib.buildDictionary(words, {
+    dict = await buildDictionary(words, {
       version: 2,
       description: `WordBin dictionary v2 – dwyl/english-words (${words.length} words)`,
     });
-  } catch (err) {
-    console.error("buildDictionary failed:");
-    console.error(err);
+  } catch (err: any) {
+    console.error("buildDictionary failed:", err);
     process.exit(1);
   }
 
@@ -104,13 +79,11 @@ async function main() {
   try {
     const json = JSON.stringify(dict, null, 2);
     await writeFile(outPath, json, "utf8");
-
     const sizeKB = (Buffer.byteLength(json) / 1024).toFixed(1);
-    console.log(`Success! Wrote Version 2 dictionary (${sizeKB} kB) to:`);
-    console.log(`  ${outPath}`);
-    console.log(`Total words used: ${words.length}`);
-  } catch (err) {
-    console.error(`Failed to write ${outPath}:`, err);
+    console.log(`Success! Wrote dictionary (${sizeKB} kB) to ${outPath}`);
+    console.log(`Total words: ${words.length}`);
+  } catch (err: any) {
+    console.error(`Failed to write file:`, err);
     process.exit(1);
   }
 }

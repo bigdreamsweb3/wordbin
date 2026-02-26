@@ -1,8 +1,8 @@
-// File: src\dictionary.ts
+// File: src\dict\builder.ts
 
-import type { WordBinDictionary } from "./types";
-import { generateWordId } from "./core/id.js";
-import { toHex } from "./utils/buffer.js";
+import type { WordBinDictionary } from "../types";
+import { generateWordId } from "../core/id.js";
+import { toHex } from "../utils/buffer.js";
 
 export interface BuildDictionaryOptions {
   /**
@@ -39,10 +39,25 @@ export async function buildDictionary(
 
   await Promise.all(
     normalizedWords.map(async (word) => {
-      const id = await generateWordId(word);
-      const key = toHex(id);
-      if (!map[key]) map[key] = [];
-      map[key].push(word);
+      let attempt = 0;
+      let key: string;
+
+      while (true) {
+        const id = await generateWordId(
+          attempt === 0 ? word : `${word}:${attempt}`,
+        );
+
+        key = toHex(id);
+
+        // If no collision, break
+        if (!map[key]) {
+          map[key] = [word];
+          break;
+        }
+
+        // Collision detected → try again
+        attempt++;
+      }
     }),
   );
 

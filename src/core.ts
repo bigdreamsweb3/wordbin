@@ -1,4 +1,4 @@
-import { MAGIC, LITERAL } from "./constants.js";
+import { LITERAL } from "./constants.js";
 import { generateWordId } from "./core/id.js";
 import {
   toHex,
@@ -10,15 +10,22 @@ import {
   utf8Decode,
 } from "./utils/buffer.js";
 import type { EncodeResult, WordBinDictionary } from "./types";
-import { buildDictionary } from "./dictionary.js";
+import { buildDictionary } from "./dict/builder";
 import {
   loadDictionaryByVersion,
   loadLatestDictionary,
-} from "./dictionary-loader.js";
+} from "./dict/dictionary-loader.js";
+
+interface DecodeMaps {
+  reverseMap: Map<string, string>;
+  forwardMap: Map<string, Uint8Array>;
+  idLengths: number[];
+}
 
 export class WordBin {
   private primaryDictVersion: number;
-  // private debug: boolean;
+  private log: (...args: any[]) => void;
+  private mapCache: Map<number, DecodeMaps> = new Map();
 
   constructor(initialDict?: WordBinDictionary, options?: { debug?: boolean }) {
     this.primaryDictVersion = initialDict?.version ?? 2;
@@ -26,8 +33,6 @@ export class WordBin {
       ? (...args) => console.log("[WordBin]", ...args)
       : () => {};
   }
-
-  private log: (...args: any[]) => void;
 
   static async createFromWords(words: string[]): Promise<WordBin> {
     console.warn("Building dictionary from scratch – consider pre-built files");
@@ -39,34 +44,63 @@ export class WordBin {
     return new WordBin(dictJson);
   }
 
-  static async create(): Promise<WordBin> {
+  static async create(options?: { debug?: boolean }): Promise<WordBin> {
     const latestDict = await loadLatestDictionary();
-    return new WordBin(latestDict);
+    return new WordBin(latestDict, options);
   }
 
-  private async getReverseMapForVersion(
-    version: number,
-  ): Promise<Map<string, string>> {
-    const dict = await loadDictionaryByVersion(version);
-    const reverseMap = new Map<string, string>();
-    for (const [hex, words] of Object.entries(dict.words)) {
-      if (words.length > 0) reverseMap.set(hex, words[0]);
+  private async getMapsForVersion(version: number): Promise<DecodeMaps> {
+    // Check cache first
+    if (this.mapCache.has(version)) {
+      return this.mapCache.get(version)!;
     }
-    return reverseMap;
+
+    const dict = await loadDictionaryByVersion(version);
+
+    const reverseMap = new Map<string, string>();
+    const forwardMap = new Map<string, Uint8Array>();
+    const idLengths = new Set<number>();
+
+    for (const [hex, words] of Object.entries(dict.words)) {
+      if (!words.length) continue;
+      if (words.length > 1)
+        throw new Error(
+          `Dictionary corruption: ID ${hex} maps to multiple words`,
+        );
+
+      const word = words[0];
+      const bytes = Uint8Array.from(Buffer.from(hex, "hex"));
+      idLengths.add(bytes.length);
+
+      reverseMap.set(hex, word);
+      forwardMap.set(word, bytes);
+    }
+
+    const sortedIdLengths = Array.from(idLengths).sort((a, b) => b - a);
+    const maps: DecodeMaps = {
+      reverseMap,
+      forwardMap,
+      idLengths: sortedIdLengths,
+    };
+
+    // Cache it
+    this.mapCache.set(version, maps);
+    return maps;
   }
 
   async encode(
     text: string | EncodeResult | Uint8Array,
-    options: { dictVersion?: number } = {},
+    options?: { dictVersion?: number },
   ): Promise<EncodeResult> {
     let textStr: string;
     if (typeof text === "string") textStr = text;
     else if (text instanceof Uint8Array) textStr = toBase64(text);
     else textStr = text.encodedBase64;
 
-    if (!textStr.trim()) {
+    if (!textStr.trim())
       return {
         originalText: "",
+        dictVersion: 0,
         encoded: new Uint8Array(0),
         payload: "",
         encodedBase64: "",
@@ -75,91 +109,43 @@ export class WordBin {
         bytesSaved: 0,
         ratioPercent: 100,
       };
-    }
 
     const words = textStr.split(/\s+/).filter(Boolean);
-    this.log(`[encode] Input words (${words.length}):`, words);
+    const useVersion = options?.dictVersion ?? this.primaryDictVersion;
 
-    const useVersion = options.dictVersion ?? this.primaryDictVersion;
-    this.log(`[encode] Using dictionary version: ${useVersion}`);
-
-    // ──────────────────────────────────────────────
-    // Header creation
-    // ──────────────────────────────────────────────
-    const header = new Uint8Array([MAGIC[0], MAGIC[1], useVersion]);
-    this.log(`[encode] Header bytes: [${[...header].join(", ")}]`);
-    this.log(`[encode] Header hex: ${toHex(header)}`);
-    this.log(
-      `[encode] Header as text (non-printable chars expected): "${new TextDecoder().decode(header)}"`,
-    );
-
+    const header = new Uint8Array([useVersion]);
     const chunks: Uint8Array[] = [header];
 
-    const reverseMap = await this.getReverseMapForVersion(useVersion);
-    this.log(`[encode] Reverse map loaded — size: ${reverseMap.size} entries`);
-
-    // ──────────────────────────────────────────────
-    // Process each word → show ID mapping
-    // ──────────────────────────────────────────────
-    this.log("[encode] Word → ID mapping:");
+    const { forwardMap } = await this.getMapsForVersion(useVersion);
 
     for (const w of words) {
-      const id = await generateWordId(w); // Uint8Array (usually 2–4 bytes)
-      const key = toHex(id); // hex string for lookup
-
-      this.log(`  "${w}" → ID bytes: [${[...id].join(", ")}] | hex: ${key}`);
-
-      if (reverseMap.has(key)) {
-        const mappedWord = reverseMap.get(key);
-        this.log(`    → Found in dictionary → using ${id.length}-byte ID`);
-        chunks.push(id);
-      } else {
+      const id = forwardMap.get(w);
+      if (id) chunks.push(id);
+      else {
         const utf8 = utf8Encode(w);
         const lenVarint = encodeVarint(utf8.length);
-        this.log(`    → NOT in dictionary → literal mode`);
-        this.log(
-          `      Literal length varint bytes: [${[...lenVarint].join(", ")}] (value = ${utf8.length})`,
-        );
-        this.log(`      Word UTF-8 bytes length: ${utf8.length}`);
-
         const out = new Uint8Array(1 + lenVarint.length + utf8.length);
         out[0] = LITERAL;
         out.set(lenVarint, 1);
         out.set(utf8, 1 + lenVarint.length);
-
-        this.log(`      Literal chunk bytes: [${[...out].join(", ")}]`);
         chunks.push(out);
       }
     }
 
-    // ──────────────────────────────────────────────
-    // Final assembly
-    // ──────────────────────────────────────────────
-    const totalLength = chunks.reduce((n, c) => n + c.length, 0);
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
     const result = new Uint8Array(totalLength);
-
-    this.log(`[encode] Total encoded length: ${totalLength} bytes`);
-
-    let off = 0;
-    chunks.forEach((chunk, i) => {
-      result.set(chunk, off);
-      off += chunk.length;
-      this.log(
-        `  Chunk ${i}: ${chunk.length} bytes → offset ${off - chunk.length}`,
-      );
-    });
-
-    this.log(
-      `[encode] Final encoded bytes (first 32): [${[...result.subarray(0, Math.min(32, result.length))].join(", ")}]`,
-    );
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
 
     const originalBytes = new TextEncoder().encode(textStr).length;
-
     const base64Result = toBase64(result);
-    this.log(`[encode] Base64 starts with: ${base64Result.slice(0, 12)}...`);
 
     return {
       originalText: textStr,
+      dictVersion: useVersion,
       encoded: result,
       payload: base64Result,
       encodedBase64: base64Result,
@@ -174,69 +160,80 @@ export class WordBin {
   }
 
   async decode(data: Uint8Array | string): Promise<string> {
-    let buffer: Uint8Array;
-    if (typeof data === "string") {
-      buffer = fromBase64(data);
-    } else {
-      buffer = data;
-    }
+    const buffer = typeof data === "string" ? fromBase64(data) : data;
 
-    if (buffer.length < 3) {
+    if (buffer.length < 1) {
       throw new Error("Data too short");
     }
 
-    if (buffer[0] !== MAGIC[0] || buffer[1] !== MAGIC[1]) {
-      throw new Error("Invalid magic bytes");
+    const version = buffer[0];
+    const { reverseMap, idLengths } = await this.getMapsForVersion(version);
+
+    // Use iterative approach with explicit stack instead of recursion
+    interface StackFrame {
+      pos: number;
+      words: string[];
+      idLenIndex: number;
     }
 
-    const version = buffer[2];
-    let pos = 3; // start right after version byte
+    const stack: StackFrame[] = [{ pos: 1, words: [], idLenIndex: 0 }];
+    const maxIdLen = idLengths[0] || 4;
 
-    const reverseMap = await this.getReverseMapForVersion(version);
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1];
+      const { pos, words, idLenIndex } = frame;
 
-    const result: string[] = [];
+      // Successfully decoded entire buffer
+      if (pos >= buffer.length) {
+        return words.join(" ");
+      }
 
-    while (pos < buffer.length) {
-      let matched = false;
-
-      // Literal block
+      // Try literal mode
       if (buffer[pos] === LITERAL) {
-        const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
+        const { value: len, bytesRead } = decodeVarint(buffer, pos + 1);
         const start = pos + 1 + bytesRead;
-        const end = start + byteLen;
+        const end = start + len;
 
         if (end > buffer.length) {
-          throw new Error("Truncated literal block");
+          stack.pop();
+          continue;
         }
 
         const word = utf8Decode(buffer.subarray(start, end));
-        result.push(word);
-        pos = end;
-        matched = true;
+        frame.words.push(word);
+        frame.pos = end;
+        frame.idLenIndex = 0;
+        continue;
       }
 
-      // Known word reference
-      if (!matched) {
-        for (const len of [4, 3, 2]) {
-          if (pos + len > buffer.length) continue;
-          const slice = buffer.subarray(pos, pos + len);
-          const key = toHex(slice);
+      // Try dictionary mode with remaining ID lengths
+      if (idLenIndex < idLengths.length) {
+        const idLen = idLengths[idLenIndex];
+        frame.idLenIndex++;
 
-          if (reverseMap.has(key)) {
-            result.push(reverseMap.get(key)!);
-            pos += len;
-            matched = true;
-            break;
+        if (pos + idLen <= buffer.length) {
+          const slice = buffer.subarray(pos, pos + idLen);
+          const key = toHex(slice);
+          const word = reverseMap.get(key);
+
+          if (word) {
+            // Found a match - push new frame
+            stack.push({
+              pos: pos + idLen,
+              words: [...words, word],
+              idLenIndex: 0,
+            });
           }
         }
+        continue;
       }
 
-      if (!matched) {
-        result.push(`[??:${buffer[pos].toString(16).padStart(2, "0")}]`);
-        pos += 1;
-      }
+      // No more ID lengths to try - backtrack
+      stack.pop();
     }
 
-    return result.join(" ");
+    throw new Error(
+      "No valid decode path found — possible corruption or dictionary mismatch",
+    );
   }
 }

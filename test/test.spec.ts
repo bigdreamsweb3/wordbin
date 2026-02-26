@@ -6,7 +6,7 @@ describe("WordBin – Core Functionality", () => {
   let wb: WordBin;
 
   beforeAll(async () => {
-    wb = await WordBin.create();
+    wb = await WordBin.create({ debug: false });
     console.log(
       "\n=== Using WordBin with dictionary version:",
       wb["primaryDictVersion"],
@@ -16,7 +16,7 @@ describe("WordBin – Core Functionality", () => {
   describe("Encoding & Decoding", () => {
     it.only("supports deep decoding – repeated common words", async () => {
       const original =
-        "food for taught";
+        "poul either learn purse candy leader craft undo spoil forum slot spirit";
 
       console.group("\n=== Encoding process ===");
       console.log("Original text:", original);
@@ -25,7 +25,8 @@ describe("WordBin – Core Functionality", () => {
       const encoded = await wb.encode(original);
 
       console.log("\nEncoding result summary:");
-      console.log("  Version used (header byte):", encoded.encoded[2]);
+      console.log("  Version used (header byte):", encoded.dictVersion);
+      console.log("  Payload:", encoded.payload);
       console.log("  Encoded length:", encoded.encodedBytes, "bytes");
       console.log("  Original length:", encoded.originalBytes, "bytes");
       console.log("  Bytes saved:", encoded.bytesSaved);
@@ -66,12 +67,11 @@ describe("WordBin – Core Functionality", () => {
       console.groupEnd();
 
       expect(decoded).toBe(original);
-      expect(encoded.encoded[0]).toBe(87); // W
-      expect(encoded.encoded[1]).toBe(66); // B
-      expect(encoded.encoded[2]).toBeGreaterThanOrEqual(1);
+
+      // Updated assertions – no magic bytes
+      expect(encoded.encoded[0]).toBeGreaterThanOrEqual(1); // version
       expect(encoded.encodedBytes).toBeLessThan(encoded.originalBytes);
     });
-
     it("handles mixed dictionary words + unknown literals", async () => {
       const mixedText = "abandon taxi quantum zzzxyz hello-world 123";
 
