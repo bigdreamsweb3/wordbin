@@ -6,7 +6,7 @@ describe("WordBin – Core Functionality", () => {
   let wb: WordBin;
 
   beforeAll(async () => {
-    wb = await WordBin.create({ debug: false });
+    wb = await WordBin.create({ debug: true });
     console.log(
       "\n=== Using WordBin with dictionary version:",
       wb["primaryDictVersion"],
@@ -16,7 +16,7 @@ describe("WordBin – Core Functionality", () => {
   describe("Encoding & Decoding", () => {
     it.only("supports deep decoding – repeated common words", async () => {
       const original =
-        "poul either learn purse candy leader craft undo spoil forum slot spirit";
+        "feed either learn purse candy leader craft undo spoil forum slot spirit";
 
       console.group("\n=== Encoding process ===");
       console.log("Original text:", original);

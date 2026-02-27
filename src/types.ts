@@ -6,8 +6,9 @@ export interface WordBinDictionary {
 
 export interface EncodeResult {
   originalText: string;
-  payload: string;
+  payload: string | Uint8Array;
   encoded: Uint8Array;
+  binaryString: string;
   dictVersion: number;
   encodedBase64: string;
   originalBytes: number;
