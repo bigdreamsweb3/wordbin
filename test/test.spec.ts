@@ -1,12 +1,12 @@
 // test/test.spec.ts
-import { WordBin } from "../src/core.js";
+import { WordBin } from "../src/core";
 import { describe, it, expect, beforeAll } from "vitest";
 
 describe("WordBin – Core Functionality", () => {
   let wb: WordBin;
 
   beforeAll(async () => {
-    wb = await WordBin.create({ debug: true });
+    wb = await WordBin.create({ debug: false });
     console.log(
       "\n=== Using WordBin with dictionary version:",
       wb["primaryDictVersion"],
@@ -27,6 +27,8 @@ describe("WordBin – Core Functionality", () => {
       console.log("\nEncoding result summary:");
       console.log("  Version used (header byte):", encoded.dictVersion);
       console.log("  Payload:", encoded.payload);
+      console.log("  Hex Payload:", encoded.hexPayload);
+      console.log("  Base58 Payload:", encoded.base58Payload);
       console.log("  Encoded length:", encoded.encodedBytes, "bytes");
       console.log("  Original length:", encoded.originalBytes, "bytes");
       console.log("  Bytes saved:", encoded.bytesSaved);

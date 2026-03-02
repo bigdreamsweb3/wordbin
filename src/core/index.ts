@@ -1,4 +1,4 @@
-import { LITERAL } from "./constants.js";
+import { LITERAL } from "../constants.js";
 import {
   toHex,
   toBase64,
@@ -7,15 +7,16 @@ import {
   decodeVarint,
   utf8Encode,
   utf8Decode,
-} from "./utils/buffer.js";
-import type { EncodeResult, WordBinDictionary } from "./types";
-import { buildDictionary } from "./dict/builder";
+} from "../utils/buffer.js";
+import type { EncodeResult, WordBinDictionary } from "../types.js";
+import { buildDictionary } from "../dict/builder.js";
 import {
   loadDictionaryByVersion,
   loadLatestDictionary,
-} from "./dict/dictionary-loader.js";
-import { toHexString, fromHexString } from "./core/binary-payload.js";
-import { SimpleLatinShortener } from "./core/latin-compressor.js";
+} from "../dict/dictionary-loader.js";
+import { toHexString, fromHexString } from "./binary-payload.js";
+import { SimpleLatinShortener } from "./comp/latin1-compressor.js";
+import bs58 from "bs58";
 
 export class WordBin {
   private primaryDictVersion: number;
@@ -97,8 +98,10 @@ export class WordBin {
         dictVersion: this.primaryDictVersion,
         encoded: new Uint8Array(0),
         payload: "",
-        binaryString: "",
+        binaryChars: "",
         encodedBase64: "",
+        hexPayload: "",
+        base58Payload: "",
         originalBytes: 0,
         encodedBytes: 0,
         bytesSaved: 0,
@@ -141,25 +144,44 @@ export class WordBin {
 
     const base64String = toBase64(result);
 
-    const hex = toHexString(result);
-    let binaryStr = "";
+    let hex = "";
+    hex = toHexString(result);
+
+    let hexToASCIIChars = "";
     for (let i = 0; i < hex.length; i += 2) {
-      binaryStr += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
+      hexToASCIIChars += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
     }
 
-    this.log("Real binaryStr (escaped):", JSON.stringify(binaryStr));
-
-    // After creating binaryStr
-    this.log("Raw binaryStr length (chars):", binaryStr.length);
     this.log(
-      "Raw binaryStr UTF-8 bytes  :",
-      new TextEncoder().encode(binaryStr).length,
+      "Real hexToASCIIChars (escaped):",
+      JSON.stringify(hexToASCIIChars),
+    );
+
+    // After creating hexToASCIIChars
+    this.log("Raw hexToASCIIChars length (chars):", hexToASCIIChars.length);
+    this.log(
+      "Raw hexToASCIIChars UTF-8 bytes  :",
+      new TextEncoder().encode(hexToASCIIChars).length,
     );
 
     const l_compressor = new SimpleLatinShortener();
 
-    this.log("binaryString as string:", binaryStr);
-    const compressedLatin = l_compressor.shorten(binaryStr);
+    this.log("hexToASCIIChars as string:", hexToASCIIChars);
+    const compressedLatin = l_compressor.shorten(hexToASCIIChars);
+    // hex = toHexString(compressedLatin);
+
+    // Your hex string from Latin-1 conversion
+    const hexLatin1 = Array.from(hexToASCIIChars)
+      .map((ch) => ch.charCodeAt(0).toString(16).padStart(2, "0"))
+      .join("");
+
+    // Step 1: Convert hex to bytes
+    const bytes = Uint8Array.from(
+      hexLatin1.match(/.{1,2}/g)!.map((h) => parseInt(h, 16)),
+    );
+
+    // Step 2: Encode to Base58
+    const base58 = bs58.encode(bytes);
 
     // Return the compressed version
     return {
@@ -168,8 +190,10 @@ export class WordBin {
 
       encoded: result,
       payload: compressedLatin,
-      binaryString: binaryStr,
+      binaryChars: hexToASCIIChars,
       encodedBase64: base64String,
+      hexPayload: hexLatin1,
+      base58Payload: base58,
 
       originalBytes,
       encodedBytes: new TextEncoder().encode(compressedLatin).length,

@@ -57,7 +57,7 @@ export class SimpleLatinShortener {
 
     // Scan and collect ALL expensive (multi-byte UTF-8) characters that are not mapped
     for (const ch of str) {
-      if (new TextEncoder().encode(ch).length > 1 && !(ch in this.manualMap)) {
+      if (new TextEncoder().encode(ch).length > 4 && !(ch in this.manualMap)) {
         unmappedExpensive.add(ch);
       }
     }
@@ -66,7 +66,7 @@ export class SimpleLatinShortener {
     if (unmappedExpensive.size > 0) {
       console.log("Unmapped expensive characters found (add to manualMap):");
       [...unmappedExpensive].forEach((ch) => {
-        const hex = ch.charCodeAt(0).toString(16).padStart(4, "0");
+        const hex = ch.charCodeAt(0).toString(32).padStart(4, "0");
         console.log(
           `  "\\u${hex}": "?", // ${ch.charCodeAt(0)} - add your replacement`,
         );
