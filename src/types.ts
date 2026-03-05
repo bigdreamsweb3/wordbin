@@ -6,19 +6,20 @@ export interface WordBinDictionary {
 
 export interface EncodeResult {
   originalText: string;
+  encoded: Uint8Array;
+  dictVersion: number;
   payload: string | Uint8Array;
+  bin21: string | Uint8Array;
+  bin21Payload: string | Uint8Array;
   hexPayload: string;
   base58Payload: string;
-  encoded: Uint8Array;
-  binaryChars: string;
-  dictVersion: number;
-  encodedBase64: string;
+  base64Payload: string;
   originalBytes: number;
   encodedBytes: number;
   bytesSaved: number;
   ratioPercent: number;
   wrapped?: {
-    encodedBase64: string;
+    base64Payload: string;
     encodedBytes: number;
     bytesSaved: number;
     ratioPercent: number;

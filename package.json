@@ -39,7 +39,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "build:dict:v1": "npx tsx scripts/dictionaries/build-v1-bip39.mts",
+    "build:dict:v1": "npx tsx scripts/dictionaries/build-v1-bip39.ts",
     "build:dict:v2": "npx tsx scripts/dictionaries/build-v2-dwyl.ts",
     "build:dict:all": "npm run build:dict:v1 && npm run build:dict:v2",
     "clean": "rimraf dist",
