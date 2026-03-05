@@ -1,6 +1,6 @@
 {
   "name": "@bigdreamsweb3/wordbin",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "WordBin – Encode words & short text into tiny, reversible binary for storage, URLs, IoT, QR codes, metadata, blockchain, or Web3 apps.",
   "author": "Agbaka Daniel Ugonna <99cratson@gmail.com>",
   "license": "MIT",
