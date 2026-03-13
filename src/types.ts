@@ -8,9 +8,7 @@ export interface EncodeResult {
   originalText: string;
   encoded: Uint8Array;
   dictVersion: number;
-  payload: string | Uint8Array;
-  bin21: string | Uint8Array;
-  bin21Payload: string | Uint8Array;
+  payload: string; // primary payload (hex)
   hexPayload: string;
   base58Payload: string;
   base64Payload: string;

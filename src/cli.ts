@@ -83,7 +83,7 @@ async function buildV1() {
     1,
     "WordBin dictionary v1 – BIP-39 English (2048 words)",
     words,
-    "wordbin-v1-bip39.json",
+    "dict-v1-bip39.json",
   );
 }
 
@@ -99,7 +99,7 @@ async function buildV2() {
     2,
     `WordBin dictionary v2 – dwyl/english-words (${words.length} words)`,
     words,
-    "wordbin-v2-dwyl.json",
+    "dict-v2-dwyl.json",
   );
 }
 
@@ -117,7 +117,7 @@ async function buildCustom(source: string) {
   const version = 3;
   const desc = `WordBin custom dictionary v${version} – from ${source} (${words.length} words)`;
 
-  await saveDict(version, desc, words, `wordbin-v${version}-custom.json`);
+  await saveDict(version, desc, words, `dict-v${version}-custom.json`);
 }
 
 async function interactiveMode() {

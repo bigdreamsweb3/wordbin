@@ -45,7 +45,7 @@ If you find a bug:
    - Expected vs actual behaviour
    - Node.js version (`node -v`)
    - Dictionary version used (v1 / v2 / custom)
-   - The payload format involved (hex / base58 / base64 / bin21 / bytes)
+   - The payload format involved (hex / base58 / base64 / bytes)
    - A minimal code snippet or failing test case
 
 ### Suggesting Features or Improvements
@@ -64,7 +64,7 @@ For larger architectural changes — new payload formats, new dictionary structu
 1. **Fork** the repository and **clone** your fork
 2. Create a focused branch:
    ```bash
-   git checkout -b fix/decode-bin21-format
+   git checkout -b fix/decode-format-detection
    # or
    git checkout -b feat/add-top-20k-dictionary
    ```
@@ -76,10 +76,10 @@ For larger architectural changes — new payload formats, new dictionary structu
    ```
 6. Commit with clear, semantic messages:
    ```
-   fix: correct bin21 format detection in detectAndConvert
+   fix: correct format detection in detectAndConvert
    feat: add partialScan fallback for non-WordBin payloads
    docs: update decode API in README
-   test: add round-trip cases for base58 and bin21 formats
+   test: add round-trip cases for base58 and base64 formats
    ```
 7. Push your branch and open a pull request against `main`
 
@@ -180,26 +180,26 @@ Set any flag to `false` to skip that suite entirely. Skipped suites are reported
 
 | Suite                  | What it tests                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------- |
-| **Encode only**        | All payload formats (hex, base58, base64, bin21), compression ratio, format validity         |
+| **Encode only**        | All payload formats (hex, base58, base64), compression ratio, format validity                |
 | **Decode only**        | Known hex payload, known base64 payload, non-WordBin fallback                                |
-| **Encode then decode** | Full round-trip for hex, base58, base64, bin21, and raw `Uint8Array`                         |
+| **Encode then decode** | Full round-trip for hex, base58, base64, and raw `Uint8Array`                                |
 | **Non-WordBin decode** | 4 foreign payloads — verifies `isWordBin: false`, `notice` is set, `text` is always a string |
 
 ---
 
 ## Where Things Live
 
-| What you want to change                                  | File                                 |
-| -------------------------------------------------------- | ------------------------------------ |
-| Encode / decode logic                                    | `src/core/wordbin.ts`                |
-| Payload format detection (hex / base58 / base64 / bin21) | `detectAndConvert()` in `wordbin.ts` |
-| `DecodeResult` type or `PayloadFormat` union             | top of `wordbin.ts`                  |
-| Partial scan / best-effort fallback                      | `partialScan()` in `wordbin.ts`      |
-| Dictionary loading and versioning                        | `src/dict/dictionary-loader.ts`      |
-| Building a dictionary from a wordlist                    | `src/dict/builder.ts`                |
-| Buffer utilities (varint, hex, utf8)                     | `src/utils/buffer.ts`                |
-| Shared constants (LITERAL byte value)                    | `src/constants.ts`                   |
-| Tests                                                    | `test/test.spec.ts`                  |
+| What you want to change                          | File                                 |
+| ------------------------------------------------ | ------------------------------------ |
+| Encode / decode logic                            | `src/core/wordbin.ts`                |
+| Payload format detection (hex / base58 / base64) | `detectAndConvert()` in `wordbin.ts` |
+| `DecodeResult` type or `PayloadFormat` union     | top of `wordbin.ts`                  |
+| Partial scan / best-effort fallback              | `partialScan()` in `wordbin.ts`      |
+| Dictionary loading and versioning                | `src/dict/dictionary-loader.ts`      |
+| Building a dictionary from a wordlist            | `src/dict/builder.ts`                |
+| Buffer utilities (varint, hex, utf8)             | `src/utils/buffer.ts`                |
+| Shared constants (LITERAL byte value)            | `src/constants.ts`                   |
+| Tests                                            | `test/test.spec.ts`                  |
 
 ---
 
@@ -209,7 +209,7 @@ These improvements would have the biggest impact right now:
 
 - **Case-insensitive dictionaries** — normalise to lowercase during dictionary building so `"Hello"` and `"hello"` encode identically
 - **Smaller curated dictionaries** — top 10k–50k common English words, programming keywords, domain-specific lists (DeFi, medical, etc.)
-- **Bin21 safety** — audit which Latin-1 characters survive common transports (databases, JSON fields) without corruption; document safe subsets
+- Note: Bin21 removed — hex is primary payload. Remove any Bin21-specific tests or docs.
 - **Performance benchmarks** — encode/decode throughput across dictionary sizes and phrase lengths
 - **Browser demo** — a minimal CodeSandbox or static HTML page showing encode/decode live
 - **CLI enhancements** — progress bars, `--lowercase` flag, `--output-dir`, improved help text

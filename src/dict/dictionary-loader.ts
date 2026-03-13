@@ -44,7 +44,7 @@ export async function getAllAvailableDictionaryVersions(): Promise<number[]> {
       const files = await fs.readdir(dir);
 
       for (const file of files) {
-        const match = file.match(/wordbin-v(\d+)/i);
+        const match = file.match(/dict-v(\d+)/i);
         if (match) {
           versions.add(parseInt(match[1], 10));
         }
@@ -76,7 +76,7 @@ export async function loadDictionaryByVersion(
     const files = await fs.readdir(dir);
 
     const versionFile = files.find((f) =>
-      f.match(new RegExp(`wordbin-v${version}(?:\\.|-)`, "i")),
+      f.match(new RegExp(`dict-v${version}(?:\\.|-)`, "i")),
     );
 
     if (versionFile) {

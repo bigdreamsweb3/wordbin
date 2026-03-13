@@ -1,0 +1,111 @@
+{
+  "_comment": "Contains All 3-byte Latin-1 characters. Each entry has Unicode code, character, name, and description.",
+
+  "codes": {
+    "2013": {
+      "char": "–",
+      "name": "endash",
+      "description": "EN DASH"
+    },
+    "2014": {
+      "char": "—",
+      "name": "emdash",
+      "description": "EM DASH"
+    },
+    "2018": {
+      "char": "‘",
+      "name": "quoteleft",
+      "description": "LEFT SINGLE QUOTATION MARK"
+    },
+    "2019": {
+      "char": "’",
+      "name": "quoteright",
+      "description": "RIGHT SINGLE QUOTATION MARK"
+    },
+    "201A": {
+      "char": "‚",
+      "name": "quotesinglbase",
+      "description": "SINGLE LOW-9 QUOTATION MARK"
+    },
+    "201C": {
+      "char": "“",
+      "name": "quotedblleft",
+      "description": "LEFT DOUBLE QUOTATION MARK"
+    },
+    "201D": {
+      "char": "”",
+      "name": "quotedblright",
+      "description": "RIGHT DOUBLE QUOTATION MARK"
+    },
+    "201E": {
+      "char": "„",
+      "name": "quotedblbase",
+      "description": "DOUBLE LOW-9 QUOTATION MARK"
+    },
+    "2020": {
+      "char": "†",
+      "name": "dagger",
+      "description": "DAGGER"
+    },
+    "2021": {
+      "char": "‡",
+      "name": "daggerdbl",
+      "description": "DOUBLE DAGGER"
+    },
+    "2022": {
+      "char": "•",
+      "name": "bullet",
+      "description": "BULLET"
+    },
+    "2026": {
+      "char": "…",
+      "name": "ellipsis",
+      "description": "HORIZONTAL ELLIPSIS"
+    },
+    "2030": {
+      "char": "‰",
+      "name": "perthousand",
+      "description": "PER MILLE SIGN"
+    },
+    "2039": {
+      "char": "‹",
+      "name": "guilsinglleft",
+      "description": "SINGLE LEFT-POINTING ANGLE QUOTATION MARK"
+    },
+    "203A": {
+      "char": "›",
+      "name": "guilsinglright",
+      "description": "SINGLE RIGHT-POINTING ANGLE QUOTATION MARK"
+    },
+    "2044": {
+      "char": "⁄",
+      "name": "fraction",
+      "description": "FRACTION SLASH"
+    },
+    "20AC": {
+      "char": "€",
+      "name": "Euro",
+      "description": "EURO SIGN"
+    },
+    "2122": {
+      "char": "™",
+      "name": "trademark",
+      "description": "TRADE MARK SIGN"
+    },
+    "2212": {
+      "char": "−",
+      "name": "minus",
+      "description": "MINUS SIGN"
+    },
+    "FB01": {
+      "char": "ﬁ",
+      "name": "fi",
+      "description": "LATIN SMALL LIGATURE FI"
+    },
+    "FB02": {
+      "char": "ﬂ",
+      "name": "fl",
+      "description": "LATIN SMALL LIGATURE FL"
+    }
+  }
+}

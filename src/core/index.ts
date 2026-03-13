@@ -15,100 +15,17 @@ import {
   getAllAvailableDictionaryVersions,
 } from "../dict/dictionary-loader.js";
 import bs58 from "bs58";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type PayloadFormat = "bytes" | "base58" | "base64" | "hex" | "bin21";
+import { detectAndConvert, type PayloadFormat } from "./format-detection.js";
+import { bytesToHex } from "./helpers.js";
+// Bin21 removed: hex is primary payload
 
 export interface DecodeResult {
-  /** The decoded text — words for WordBin payloads, best-effort for others. */
   text: string;
-  /** True only when the payload was a valid, fully-parsed WordBin stream. */
   isWordBin: boolean;
-  /** Auto-detected wire format of the input. */
   detectedFormat: PayloadFormat;
-  /**
-   * Human-readable notice when the payload is not a valid WordBin stream.
-   * Includes information about what the decoder did as a fallback.
-   */
   notice?: string;
-  /**
-   * Present when partial scanning was used (non-WordBin payloads).
-   * Lists raw byte sequences that had no dictionary match, in order.
-   */
   rawSegments?: string[];
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Standard hex encoding — every byte zero-padded to exactly 2 chars. */
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-// ─── Payload format detection ─────────────────────────────────────────────────
-
-/**
- * Detects the wire format of a string payload and converts it to raw bytes.
- *
- * Priority:
- *  1. Pure hex string  (only 0-9 a-f, even length)
- *  2. Base58           (only Base58 alphabet chars)
- *  3. Base64 / Base64url
- *  4. Binary / Latin-1 (bin21Payload / payload field from encode())
- */
-function detectAndConvert(payload: string): {
-  buffer: Uint8Array;
-  detectedFormat: PayloadFormat;
-} {
-  // 1. Hex
-  if (/^[0-9a-fA-F]+$/.test(payload) && payload.length % 2 === 0) {
-    const bytes = Uint8Array.from(
-      payload.match(/.{1,2}/g)!.map((h) => parseInt(h, 16)),
-    );
-    return { buffer: bytes, detectedFormat: "hex" };
-  }
-
-  // 2. Base58
-  const base58Re =
-    /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
-  if (base58Re.test(payload)) {
-    try {
-      return { buffer: bs58.decode(payload), detectedFormat: "base58" };
-    } catch {
-      /* fall through */
-    }
-  }
-
-  // 3. Base64 / Base64url
-  const b64Re =
-    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
-  const b64urlRe =
-    /^(?:[A-Za-z0-9\-_]{4})*(?:[A-Za-z0-9\-_]{2}(?:==)?|[A-Za-z0-9\-_]{3}=?|[A-Za-z0-9\-_]{4})$/;
-  const norm = payload.replace(/-/g, "+").replace(/_/g, "/");
-  const padded =
-    norm + (norm.length % 4 ? "=".repeat(4 - (norm.length % 4)) : "");
-  if (b64Re.test(payload) || b64urlRe.test(payload)) {
-    try {
-      const bin = atob(padded);
-      return {
-        buffer: Uint8Array.from(bin, (c) => c.charCodeAt(0)),
-        detectedFormat: "base64",
-      };
-    } catch {
-      /* fall through */
-    }
-  }
-
-  // 4. Binary / Latin-1
-  const bytes = new Uint8Array(payload.length);
-  for (let i = 0; i < payload.length; i++) bytes[i] = payload.charCodeAt(i);
-  return { buffer: bytes, detectedFormat: "bin21" };
-}
-
-// ─── WordBin ──────────────────────────────────────────────────────────────────
 
 export class WordBin {
   private primaryDictVersion: number;
@@ -167,8 +84,6 @@ export class WordBin {
     };
   }
 
-  // ── encode ──────────────────────────────────────────────────────────────────
-
   async encode(
     text: string | EncodeResult | Uint8Array,
     options?: { dictVersion?: number },
@@ -189,8 +104,6 @@ export class WordBin {
         dictVersion: this.primaryDictVersion,
         encoded: new Uint8Array(0),
         payload: "",
-        bin21: "",
-        bin21Payload: "",
         base64Payload: "",
         hexPayload: "",
         base58Payload: "",
@@ -230,51 +143,30 @@ export class WordBin {
 
     const originalBytes = new TextEncoder().encode(textStr).length;
 
-    // ── All payload representations derived directly from `result` ────────────
-    // hexPayload: standard lowercase hex, 2 chars per byte, zero-padded.
     const hexPayload = bytesToHex(result);
-
-    // bin21Payload / payload: Latin-1 string, 1 char per byte.
-    const bin21Payload = Array.from(result)
-      .map((b) => String.fromCharCode(b))
-      .join("");
-
-    // base64: via existing toBase64 util.
     const base64Payload = toBase64(result);
-
-    // base58: directly from the raw result bytes.
     const base58Payload = bs58.encode(result);
+
+    // `payload` is the primary representation (hex). encodedBytes is
+    // reported as number of raw bytes = hex length / 2.
+    const encodedBytes = Math.floor(hexPayload.length / 2);
 
     return {
       originalText: textStr,
       dictVersion: useVersion,
       encoded: result,
-      bin21: bin21Payload,
-      payload: bin21Payload,
-      bin21Payload,
+      payload: hexPayload,
       hexPayload,
       base64Payload,
       base58Payload,
       originalBytes,
-      encodedBytes: bin21Payload.length,
-      bytesSaved: originalBytes - bin21Payload.length,
-      ratioPercent:
-        Math.round((bin21Payload.length / originalBytes) * 10000) / 100,
+      encodedBytes,
+      bytesSaved: originalBytes - encodedBytes,
+      ratioPercent: Math.round((encodedBytes / originalBytes) * 10000) / 100,
     };
   }
 
-  // ── decode ───────────────────────────────────────────────────────────────────
-
-  /**
-   * Decodes any supported payload format back to human-readable text.
-   *
-   * For valid WordBin payloads:  returns the exact original words.
-   * For non-WordBin payloads:    scans byte-by-byte, extracts dictionary words
-   *                               wherever possible, and preserves unrecognised
-   *                               bytes as "[0xXX]" markers.
-   */
   async decode(payload: Uint8Array | string): Promise<DecodeResult> {
-    // ── Step 1: wire-format → raw bytes ───────────────────────────────────────
     let buffer: Uint8Array;
     let detectedFormat: PayloadFormat;
 
@@ -299,11 +191,6 @@ export class WordBin {
       };
     }
 
-    // ── Step 2: try every installed dictionary (strict WordBin parse) ──────────
-    //
-    // For each version we try two start positions:
-    //   pos=1  treat byte[0] as the version header and skip it
-    //   pos=0  treat the entire buffer as payload (no header present)
     const availableVersions = await getAllAvailableDictionaryVersions();
     const versionByte = buffer[0];
     const versionIsHeader = availableVersions.includes(versionByte);
@@ -313,7 +200,6 @@ export class WordBin {
         `versionByte=${versionByte} isKnownHeader=${versionIsHeader}`,
     );
 
-    // Put the version that matches byte[0] first so the fast path is tried first.
     const tryOrder = versionIsHeader
       ? [versionByte, ...availableVersions.filter((v) => v !== versionByte)]
       : [...availableVersions];
@@ -328,10 +214,7 @@ export class WordBin {
       }
       const { reverseMap, sortedIdLengths } = maps;
 
-      // pos=1: standard WordBin stream with header byte
-      const r1 =
-        this.greedyDecode(buffer, 1, reverseMap, sortedIdLengths) ??
-        this.tryDecode(1, buffer, reverseMap, [], 0, sortedIdLengths);
+      const r1 = this.greedyDecode(buffer, 1, reverseMap, sortedIdLengths);
       this.log(
         `[decode] v${ver} strict(pos=1): ${r1 !== null ? `"${r1}"` : "null"}`,
       );
@@ -344,10 +227,7 @@ export class WordBin {
         return { text: r1, isWordBin: true, detectedFormat, notice };
       }
 
-      // pos=0: payload with no header byte
-      const r0 =
-        this.greedyDecode(buffer, 0, reverseMap, sortedIdLengths) ??
-        this.tryDecode(0, buffer, reverseMap, [], 0, sortedIdLengths);
+      const r0 = this.greedyDecode(buffer, 0, reverseMap, sortedIdLengths);
       this.log(
         `[decode] v${ver} strict(pos=0): ${r0 !== null ? `"${r0}"` : "null"}`,
       );
@@ -361,23 +241,14 @@ export class WordBin {
       }
     }
 
-    // ── Step 3: partial / best-effort scan ────────────────────────────────────
-    //
-    // No strict parse succeeded. Scan byte-by-byte across every available
-    // dictionary and extract words wherever the bytes match a dictionary ID.
-    // Bytes that match nothing are preserved as "[0xXX]" markers.
-    // This ensures the decoder never silently discards data.
     this.log(`[decode] strict parse failed — falling back to partial scan`);
 
     if (availableVersions.length > 0) {
-      // Use the latest available dictionary for the scan.
       const scanVersion = availableVersions[availableVersions.length - 1];
       try {
         const { reverseMap, sortedIdLengths } =
           await this.getMapsForVersion(scanVersion);
 
-        // Try scanning from pos=1 (skip possible header) and pos=0, pick the
-        // one that recognises more words.
         const scan1 = this.partialScan(buffer, 1, reverseMap, sortedIdLengths);
         const scan0 = this.partialScan(buffer, 0, reverseMap, sortedIdLengths);
         const best = scan1.wordCount >= scan0.wordCount ? scan1 : scan0;
@@ -400,12 +271,9 @@ export class WordBin {
           rawSegments: best.rawSegments,
           notice,
         };
-      } catch {
-        /* fall through to plain UTF-8 */
-      }
+      } catch {}
     }
 
-    // ── Step 4: plain UTF-8 last resort ───────────────────────────────────────
     const notice =
       `Could not decode with any available dictionary ` +
       `(tried: ${availableVersions.join(", ") || "none"}). ` +
@@ -419,12 +287,6 @@ export class WordBin {
     };
   }
 
-  // ── Private: greedy linear decode ────────────────────────────────────────────
-
-  /**
-   * O(n) longest-match-first decode. Returns null if any byte has no match.
-   * This is the fast path; tryDecode is used as a backtracking fallback.
-   */
   private greedyDecode(
     buffer: Uint8Array,
     startPos: number,
@@ -436,14 +298,29 @@ export class WordBin {
 
     while (pos < buffer.length) {
       if (buffer[pos] === LITERAL) {
-        const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
-        if (byteLen > 1_000_000 || byteLen < 0) return null;
-        const start = pos + 1 + bytesRead;
-        const end = start + byteLen;
-        if (end > buffer.length) return null;
-        words.push(utf8Decode(buffer.subarray(start, end)));
-        pos = end;
-        continue;
+        // Guard against false positives: if the following bytes do not form a
+        // valid varint (truncated or malformed), treat this as NOT a literal
+        // and fall through to ID matching. This avoids misinterpreting an ID
+        // byte that equals `LITERAL` as the start of a literal block.
+        let byteLen: number;
+        let bytesRead: number;
+        try {
+          ({ value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1));
+        } catch {
+          // Not a valid varint — continue to ID matching below.
+          byteLen = -1;
+          bytesRead = 0;
+        }
+
+        if (byteLen > 0) {
+          if (byteLen > 1_000_000 || byteLen < 0) return null;
+          const start = pos + 1 + bytesRead;
+          const end = start + byteLen;
+          if (end > buffer.length) return null;
+          words.push(utf8Decode(buffer.subarray(start, end)));
+          pos = end;
+          continue;
+        }
       }
 
       let matched = false;
@@ -463,13 +340,6 @@ export class WordBin {
     return words.join(" ");
   }
 
-  // ── Private: partial / best-effort scan ──────────────────────────────────────
-
-  /**
-   * Scans through the buffer extracting any recognised dictionary words.
-   * Unrecognised bytes are collected as raw segments and rendered as [0xXX].
-   * Always consumes the entire buffer — never returns null.
-   */
   private partialScan(
     buffer: Uint8Array,
     startPos: number,
@@ -482,7 +352,6 @@ export class WordBin {
     let pos = startPos;
 
     while (pos < buffer.length) {
-      // Try LITERAL token
       if (buffer[pos] === LITERAL && pos + 1 < buffer.length) {
         try {
           const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
@@ -497,12 +366,9 @@ export class WordBin {
               continue;
             }
           }
-        } catch {
-          /* malformed varint — treat as raw byte */
-        }
+        } catch {}
       }
 
-      // Try dictionary IDs (longest first)
       let matched = false;
       for (const len of sortedIdLengths) {
         if (pos + len > buffer.length) continue;
@@ -517,7 +383,6 @@ export class WordBin {
       }
 
       if (!matched) {
-        // No match — emit this byte as a hex marker and advance by 1
         const marker = `[0x${buffer[pos].toString(16).padStart(2, "0")}]`;
         parts.push(marker);
         rawSegments.push(marker);
@@ -531,8 +396,6 @@ export class WordBin {
     return { text: parts.join(" "), wordCount, rawSegments };
   }
 
-  // ── Private: backtracking decode ─────────────────────────────────────────────
-
   private tryDecode(
     pos: number,
     buffer: Uint8Array,
@@ -544,22 +407,31 @@ export class WordBin {
     if (pos === buffer.length) return result.join(" ");
 
     if (buffer[pos] === LITERAL) {
-      const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
-      if (byteLen > 1_000_000 || byteLen < 0) return null;
-      const start = pos + 1 + bytesRead;
-      const end = start + byteLen;
-      if (end > buffer.length) return null;
-      result.push(utf8Decode(buffer.subarray(start, end)));
-      const res = this.tryDecode(
-        end,
-        buffer,
-        reverseMap,
-        result,
-        depth + 1,
-        sortedIdLengths,
-      );
-      if (res !== null) return res;
-      result.pop();
+      let byteLen: number;
+      let bytesRead: number;
+      try {
+        ({ value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1));
+      } catch {
+        byteLen = -1;
+        bytesRead = 0;
+      }
+      if (byteLen > 0) {
+        if (byteLen > 1_000_000 || byteLen < 0) return null;
+        const start = pos + 1 + bytesRead;
+        const end = start + byteLen;
+        if (end > buffer.length) return null;
+        result.push(utf8Decode(buffer.subarray(start, end)));
+        const res = this.tryDecode(
+          end,
+          buffer,
+          reverseMap,
+          result,
+          depth + 1,
+          sortedIdLengths,
+        );
+        if (res !== null) return res;
+        result.pop();
+      }
     }
 
     for (const len of sortedIdLengths) {

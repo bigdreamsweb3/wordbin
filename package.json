@@ -47,6 +47,7 @@
     "dev": "vite",
     "test": "vitest",
     "publish": "npm publish --access public",
+    "runPyScript:map-l1-to-ascii": "python ./docs/latin1_to_ascii.py ./docs/2bytes-latin-1-chars.json ./docs/1byte-ASCII-chars.json ./docs/mapped_2bytes-latin-1-to-1bytes-ascii.json",
     "release:patch": "npm run version:patch && npm run build && npm publish --access public",
     "release:minor": "npm run version:minor && npm run build && npm publish --access public",
     "release:major": "npm run version:major && npm run build && npm publish --access public",

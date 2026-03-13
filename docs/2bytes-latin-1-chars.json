@@ -1,0 +1,512 @@
+{
+  "_comment": "Contains All 2-byte Latin-1 characters. Each entry has Unicode code, character, name, and description.",
+
+  "codes": {
+    "00A1": {
+      "char": "¡",
+      "name": "exclamdown",
+      "description": "INVERTED EXCLAMATION MARK"
+    },
+    "00A2": { "char": "¢", "name": "cent", "description": "CENT SIGN" },
+    "00A3": { "char": "£", "name": "sterling", "description": "POUND SIGN" },
+    "00A4": { "char": "¤", "name": "currency", "description": "CURRENCY SIGN" },
+    "00A5": { "char": "¥", "name": "yen", "description": "YEN SIGN" },
+    "00A6": { "char": "¦", "name": "brokenbar", "description": "BROKEN BAR" },
+    "00A7": { "char": "§", "name": "section", "description": "SECTION SIGN" },
+    "00A8": { "char": "¨", "name": "dieresis", "description": "DIAERESIS" },
+    "00A9": {
+      "char": "©",
+      "name": "copyright",
+      "description": "COPYRIGHT SIGN"
+    },
+    "00AA": {
+      "char": "ª",
+      "name": "ordfeminine",
+      "description": "FEMININE ORDINAL INDICATOR"
+    },
+    "00AB": {
+      "char": "«",
+      "name": "guillemotleft",
+      "description": "LEFT-POINTING DOUBLE ANGLE QUOTATION MARK"
+    },
+    "00AC": { "char": "¬", "name": "logicalnot", "description": "NOT SIGN" },
+    "00AE": {
+      "char": "®",
+      "name": "registered",
+      "description": "REGISTERED SIGN"
+    },
+    "00AF": { "char": "¯", "name": "macron", "description": "MACRON" },
+    "00B0": { "char": "°", "name": "degree", "description": "DEGREE SIGN" },
+    "00B1": {
+      "char": "±",
+      "name": "plusminus",
+      "description": "PLUS-MINUS SIGN"
+    },
+    "00B2": {
+      "char": "²",
+      "name": "twosuperior",
+      "description": "SUPERSCRIPT TWO"
+    },
+    "00B3": {
+      "char": "³",
+      "name": "threesuperior",
+      "description": "SUPERSCRIPT THREE"
+    },
+    "00B4": { "char": "´", "name": "acute", "description": "ACUTE ACCENT" },
+    "00B5": { "char": "µ", "name": "uni00B5", "description": "MICRO SIGN" },
+    "00B6": { "char": "¶", "name": "paragraph", "description": "PILCROW SIGN" },
+    "00B7": {
+      "char": "·",
+      "name": "periodcentered",
+      "description": "MIDDLE DOT"
+    },
+    "00B8": { "char": "¸", "name": "cedilla", "description": "CEDILLA" },
+    "00B9": {
+      "char": "¹",
+      "name": "onesuperior",
+      "description": "SUPERSCRIPT ONE"
+    },
+    "00BA": {
+      "char": "º",
+      "name": "ordmasculine",
+      "description": "MASCULINE ORDINAL INDICATOR"
+    },
+    "00BB": {
+      "char": "»",
+      "name": "guillemotright",
+      "description": "RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK"
+    },
+    "00BC": {
+      "char": "¼",
+      "name": "onequarter",
+      "description": "VULGAR FRACTION ONE QUARTER"
+    },
+    "00BD": {
+      "char": "½",
+      "name": "onehalf",
+      "description": "VULGAR FRACTION ONE HALF"
+    },
+    "00BE": {
+      "char": "¾",
+      "name": "threequarters",
+      "description": "VULGAR FRACTION THREE QUARTERS"
+    },
+    "00BF": {
+      "char": "¿",
+      "name": "questiondown",
+      "description": "INVERTED QUESTION MARK"
+    },
+    "00C0": {
+      "char": "À",
+      "name": "Agrave",
+      "description": "LATIN CAPITAL LETTER A WITH GRAVE"
+    },
+    "00C1": {
+      "char": "Á",
+      "name": "Aacute",
+      "description": "LATIN CAPITAL LETTER A WITH ACUTE"
+    },
+    "00C2": {
+      "char": "Â",
+      "name": "Acircumflex",
+      "description": "LATIN CAPITAL LETTER A WITH CIRCUMFLEX"
+    },
+    "00C3": {
+      "char": "Ã",
+      "name": "Atilde",
+      "description": "LATIN CAPITAL LETTER A WITH TILDE"
+    },
+    "00C4": {
+      "char": "Ä",
+      "name": "Adieresis",
+      "description": "LATIN CAPITAL LETTER A WITH DIAERESIS"
+    },
+    "00C5": {
+      "char": "Å",
+      "name": "Aring",
+      "description": "LATIN CAPITAL LETTER A WITH RING ABOVE"
+    },
+    "00C6": {
+      "char": "Æ",
+      "name": "AE",
+      "description": "LATIN CAPITAL LETTER AE"
+    },
+    "00C7": {
+      "char": "Ç",
+      "name": "Ccedilla",
+      "description": "LATIN CAPITAL LETTER C WITH CEDILLA"
+    },
+    "00C8": {
+      "char": "È",
+      "name": "Egrave",
+      "description": "LATIN CAPITAL LETTER E WITH GRAVE"
+    },
+    "00C9": {
+      "char": "É",
+      "name": "Eacute",
+      "description": "LATIN CAPITAL LETTER E WITH ACUTE"
+    },
+    "00CA": {
+      "char": "Ê",
+      "name": "Ecircumflex",
+      "description": "LATIN CAPITAL LETTER E WITH CIRCUMFLEX"
+    },
+    "00CB": {
+      "char": "Ë",
+      "name": "Edieresis",
+      "description": "LATIN CAPITAL LETTER E WITH DIAERESIS"
+    },
+    "00CC": {
+      "char": "Ì",
+      "name": "Igrave",
+      "description": "LATIN CAPITAL LETTER I WITH GRAVE"
+    },
+    "00CD": {
+      "char": "Í",
+      "name": "Iacute",
+      "description": "LATIN CAPITAL LETTER I WITH ACUTE"
+    },
+    "00CE": {
+      "char": "Î",
+      "name": "Icircumflex",
+      "description": "LATIN CAPITAL LETTER I WITH CIRCUMFLEX"
+    },
+    "00CF": {
+      "char": "Ï",
+      "name": "Idieresis",
+      "description": "LATIN CAPITAL LETTER I WITH DIAERESIS"
+    },
+    "00D0": {
+      "char": "Ð",
+      "name": "Eth",
+      "description": "LATIN CAPITAL LETTER ETH"
+    },
+    "00D1": {
+      "char": "Ñ",
+      "name": "Ntilde",
+      "description": "LATIN CAPITAL LETTER N WITH TILDE"
+    },
+    "00D2": {
+      "char": "Ò",
+      "name": "Ograve",
+      "description": "LATIN CAPITAL LETTER O WITH GRAVE"
+    },
+    "00D3": {
+      "char": "Ó",
+      "name": "Oacute",
+      "description": "LATIN CAPITAL LETTER O WITH ACUTE"
+    },
+    "00D4": {
+      "char": "Ô",
+      "name": "Ocircumflex",
+      "description": "LATIN CAPITAL LETTER O WITH CIRCUMFLEX"
+    },
+    "00D5": {
+      "char": "Õ",
+      "name": "Otilde",
+      "description": "LATIN CAPITAL LETTER O WITH TILDE"
+    },
+    "00D6": {
+      "char": "Ö",
+      "name": "Odieresis",
+      "description": "LATIN CAPITAL LETTER O WITH DIAERESIS"
+    },
+    "00D7": {
+      "char": "×",
+      "name": "multiply",
+      "description": "MULTIPLICATION SIGN"
+    },
+    "00D8": {
+      "char": "Ø",
+      "name": "Oslash",
+      "description": "LATIN CAPITAL LETTER O WITH STROKE"
+    },
+    "00D9": {
+      "char": "Ù",
+      "name": "Ugrave",
+      "description": "LATIN CAPITAL LETTER U WITH GRAVE"
+    },
+    "00DA": {
+      "char": "Ú",
+      "name": "Uacute",
+      "description": "LATIN CAPITAL LETTER U WITH ACUTE"
+    },
+    "00DB": {
+      "char": "Û",
+      "name": "Ucircumflex",
+      "description": "LATIN CAPITAL LETTER U WITH CIRCUMFLEX"
+    },
+    "00DC": {
+      "char": "Ü",
+      "name": "Udieresis",
+      "description": "LATIN CAPITAL LETTER U WITH DIAERESIS"
+    },
+    "00DD": {
+      "char": "Ý",
+      "name": "Yacute",
+      "description": "LATIN CAPITAL LETTER Y WITH ACUTE"
+    },
+    "00DE": {
+      "char": "Þ",
+      "name": "Thorn",
+      "description": "LATIN CAPITAL LETTER THORN"
+    },
+    "00DF": {
+      "char": "ß",
+      "name": "germandbls",
+      "description": "LATIN SMALL LETTER SHARP S"
+    },
+    "00E0": {
+      "char": "à",
+      "name": "agrave",
+      "description": "LATIN SMALL LETTER A WITH GRAVE"
+    },
+    "00E1": {
+      "char": "á",
+      "name": "aacute",
+      "description": "LATIN SMALL LETTER A WITH ACUTE"
+    },
+    "00E2": {
+      "char": "â",
+      "name": "acircumflex",
+      "description": "LATIN SMALL LETTER A WITH CIRCUMFLEX"
+    },
+    "00E3": {
+      "char": "ã",
+      "name": "atilde",
+      "description": "LATIN SMALL LETTER A WITH TILDE"
+    },
+    "00E4": {
+      "char": "ä",
+      "name": "adieresis",
+      "description": "LATIN SMALL LETTER A WITH DIAERESIS"
+    },
+    "00E5": {
+      "char": "å",
+      "name": "aring",
+      "description": "LATIN SMALL LETTER A WITH RING ABOVE"
+    },
+    "00E6": {
+      "char": "æ",
+      "name": "ae",
+      "description": "LATIN SMALL LETTER AE"
+    },
+    "00E7": {
+      "char": "ç",
+      "name": "ccedilla",
+      "description": "LATIN SMALL LETTER C WITH CEDILLA"
+    },
+    "00E8": {
+      "char": "è",
+      "name": "egrave",
+      "description": "LATIN SMALL LETTER E WITH GRAVE"
+    },
+    "00E9": {
+      "char": "é",
+      "name": "eacute",
+      "description": "LATIN SMALL LETTER E WITH ACUTE"
+    },
+    "00EA": {
+      "char": "ê",
+      "name": "ecircumflex",
+      "description": "LATIN SMALL LETTER E WITH CIRCUMFLEX"
+    },
+    "00EB": {
+      "char": "ë",
+      "name": "edieresis",
+      "description": "LATIN SMALL LETTER E WITH DIAERESIS"
+    },
+    "00EC": {
+      "char": "ì",
+      "name": "igrave",
+      "description": "LATIN SMALL LETTER I WITH GRAVE"
+    },
+    "00ED": {
+      "char": "í",
+      "name": "iacute",
+      "description": "LATIN SMALL LETTER I WITH ACUTE"
+    },
+    "00EE": {
+      "char": "î",
+      "name": "icircumflex",
+      "description": "LATIN SMALL LETTER I WITH CIRCUMFLEX"
+    },
+    "00EF": {
+      "char": "ï",
+      "name": "idieresis",
+      "description": "LATIN SMALL LETTER I WITH DIAERESIS"
+    },
+    "00F0": {
+      "char": "ð",
+      "name": "eth",
+      "description": "LATIN SMALL LETTER ETH"
+    },
+    "00F1": {
+      "char": "ñ",
+      "name": "ntilde",
+      "description": "LATIN SMALL LETTER N WITH TILDE"
+    },
+    "00F2": {
+      "char": "ò",
+      "name": "ograve",
+      "description": "LATIN SMALL LETTER O WITH GRAVE"
+    },
+    "00F3": {
+      "char": "ó",
+      "name": "oacute",
+      "description": "LATIN SMALL LETTER O WITH ACUTE"
+    },
+    "00F4": {
+      "char": "ô",
+      "name": "ocircumflex",
+      "description": "LATIN SMALL LETTER O WITH CIRCUMFLEX"
+    },
+    "00F5": {
+      "char": "õ",
+      "name": "otilde",
+      "description": "LATIN SMALL LETTER O WITH TILDE"
+    },
+    "00F6": {
+      "char": "ö",
+      "name": "odieresis",
+      "description": "LATIN SMALL LETTER O WITH DIAERESIS"
+    },
+    "00F7": { "char": "÷", "name": "divide", "description": "DIVISION SIGN" },
+    "00F8": {
+      "char": "ø",
+      "name": "oslash",
+      "description": "LATIN SMALL LETTER O WITH STROKE"
+    },
+    "00F9": {
+      "char": "ù",
+      "name": "ugrave",
+      "description": "LATIN SMALL LETTER U WITH GRAVE"
+    },
+    "00FA": {
+      "char": "ú",
+      "name": "uacute",
+      "description": "LATIN SMALL LETTER U WITH ACUTE"
+    },
+    "00FB": {
+      "char": "û",
+      "name": "ucircumflex",
+      "description": "LATIN SMALL LETTER U WITH CIRCUMFLEX"
+    },
+    "00FC": {
+      "char": "ü",
+      "name": "udieresis",
+      "description": "LATIN SMALL LETTER U WITH DIAERESIS"
+    },
+    "00FD": {
+      "char": "ý",
+      "name": "yacute",
+      "description": "LATIN SMALL LETTER Y WITH ACUTE"
+    },
+    "00FE": {
+      "char": "þ",
+      "name": "thorn",
+      "description": "LATIN SMALL LETTER THORN"
+    },
+    "00FF": {
+      "char": "ÿ",
+      "name": "ydieresis",
+      "description": "LATIN SMALL LETTER Y WITH DIAERESIS"
+    },
+
+    "0131": {
+      "char": "ı",
+      "name": "dotlessi",
+      "description": "LATIN SMALL LETTER DOTLESS I"
+    },
+    "0141": {
+      "char": "Ł",
+      "name": "Lslash",
+      "description": "LATIN CAPITAL LETTER L WITH STROKE"
+    },
+    "0142": {
+      "char": "ł",
+      "name": "lslash",
+      "description": "LATIN SMALL LETTER L WITH STROKE"
+    },
+    "0152": {
+      "char": "Œ",
+      "name": "OE",
+      "description": "LATIN CAPITAL LIGATURE OE"
+    },
+    "0153": {
+      "char": "œ",
+      "name": "oe",
+      "description": "LATIN SMALL LIGATURE OE"
+    },
+    "0160": {
+      "char": "Š",
+      "name": "Scaron",
+      "description": "LATIN CAPITAL LETTER S WITH CARON"
+    },
+    "0161": {
+      "char": "š",
+      "name": "scaron",
+      "description": "LATIN SMALL LETTER S WITH CARON"
+    },
+    "0178": {
+      "char": "Ÿ",
+      "name": "Ydieresis",
+      "description": "LATIN CAPITAL LETTER Y WITH DIAERESIS"
+    },
+    "017D": {
+      "char": "Ž",
+      "name": "Zcaron",
+      "description": "LATIN CAPITAL LETTER Z WITH CARON"
+    },
+    "017E": {
+      "char": "ž",
+      "name": "zcaron",
+      "description": "LATIN SMALL LETTER Z WITH CARON"
+    },
+    "0192": {
+      "char": "ƒ",
+      "name": "florin",
+      "description": "LATIN SMALL LETTER F WITH HOOK"
+    },
+    "02C6": {
+      "char": "ˆ",
+      "name": "circumflex",
+      "description": "MODIFIER LETTER CIRCUMFLEX ACCENT"
+    },
+    "02C7": {
+      "char": "ˇ",
+      "name": "caron",
+      "description": "CARON"
+    },
+    "02D8": {
+      "char": "˘",
+      "name": "breve",
+      "description": "BREVE"
+    },
+    "02D9": {
+      "char": "˙",
+      "name": "dotaccent",
+      "description": "DOT ABOVE"
+    },
+    "02DA": {
+      "char": "˚",
+      "name": "ring",
+      "description": "RING ABOVE"
+    },
+    "02DB": {
+      "char": "˛",
+      "name": "ogonek",
+      "description": "OGONEK"
+    },
+    "02DC": {
+      "char": "˜",
+      "name": "tilde",
+      "description": "SMALL TILDE"
+    },
+    "02DD": {
+      "char": "˝",
+      "name": "hungarumlaut",
+      "description": "DOUBLE ACUTE ACCENT"
+    }
+  }
+}

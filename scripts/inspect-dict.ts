@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 async function inspectDictionary() {
   console.log("=== Dictionary Inspector ===\n");
 
-  const dictPath = path.join(__dirname, "../data/wordbin-v1-bip39.json");
+  const dictPath = path.join(__dirname, "../data/dict-v1-bip39.json");
 
   try {
     const data = await fs.readFile(dictPath, "utf8");

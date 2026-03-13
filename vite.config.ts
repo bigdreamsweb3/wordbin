@@ -48,7 +48,7 @@ export default defineConfig({
       targets: [
         {
           // src: "data/**/*",
-          src: "data/wordbin-v1-bip39.json",
+          src: "data/dict-v1-bip39.json",
           dest: "dist/data",
         },
       ],

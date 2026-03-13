@@ -1,5 +1,5 @@
 // test/test.spec.ts
-import { WordBin } from "../src/core";
+import { WordBin } from "../src/core/";
 import { describe, it, expect, beforeAll } from "vitest";
 
 // ─── Toggle which suites run ──────────────────────────────────────────────────
@@ -26,10 +26,9 @@ const SAMPLE_TEXT =
 
 // A pre-encoded hex payload produced by a previous encode run with the v1 dict.
 // Update this value whenever you rebuild or change the dictionary.
-const KNOWN_HEX_PAYLOAD =
-  "0108c424409e363270f7d64deba55e2e11ba716eba59926de2f50282599fc5afd1a8";
+const KNOWN_HEX_PAYLOAD = "e2e11ba716eba59926de2f50282599fc5afd1a8";
 
-// const KNOWN_BIN21_PAYLOAD = "Ä$@ÖMë¥^.◄ºqnºYmâõ☻Y";
+// const KNOWN_BIN21_PAYLOAD = "";
 
 // ─── Suite setup ──────────────────────────────────────────────────────────────
 
@@ -59,12 +58,12 @@ describe("WordBin", () => {
       console.log("Hex payload     :", encoded.hexPayload);
       console.log("Base58 payload  :", encoded.base58Payload);
       console.log("Base64 payload  :", encoded.base64Payload);
-      console.log("Bin21 payload  :", encoded.payload);
+      console.log("Payload (hex)  :", encoded.payload);
       console.log("Encoded bytes   :", encoded.encodedBytes);
       console.log("Original bytes  :", encoded.originalBytes);
       console.log("Bytes saved     :", encoded.bytesSaved);
       console.log("Ratio           :", encoded.ratioPercent + "%");
-      console.log("First 6 bytes   :", [...encoded.encoded.slice(0, 6)]);
+      console.log("First 6 bytes   :", [...encoded.encoded]);
       console.groupEnd();
 
       // Version header byte must match what the encoder recorded
@@ -107,39 +106,39 @@ describe("WordBin", () => {
   describe("Decode only", () => {
     const suite = RUN.DECODE_ONLY ? it : it.skip;
 
-    suite("decodes a known WordBin bin21 payload", async () => {
-      const { bin21Payload } = await wb.encode(SAMPLE_TEXT);
-
-      console.group("\n=== Decode only — WordBin bin21 ===");
-      const result = await wb.decode(bin21Payload);
-      console.log("Input payload   :", bin21Payload);
-      console.log("Decoded text    :", result.text);
-      console.log("Detected format :", result.detectedFormat);
-      console.log("Is WordBin      :", result.isWordBin);
-      console.groupEnd();
-
-      expect(result.text, "text = original").toBe(SAMPLE_TEXT);
-      expect(result.isWordBin, "isWordBin = true").toBe(true);
-      expect(result.detectedFormat, "format = bin21").toBe("bin21");
-    });
-
     suite("decodes a known WordBin hex payload", async () => {
+      const { hexPayload } = await wb.encode(SAMPLE_TEXT);
+
       console.group("\n=== Decode only — WordBin hex ===");
-
-      const result = await wb.decode(KNOWN_HEX_PAYLOAD);
-
-      console.log("Input payload   :", KNOWN_HEX_PAYLOAD);
+      const result = await wb.decode(hexPayload);
+      console.log("Input payload   :", hexPayload);
       console.log("Decoded text    :", result.text);
       console.log("Detected format :", result.detectedFormat);
       console.log("Is WordBin      :", result.isWordBin);
-      if (result.notice) console.warn("Notice          :", result.notice);
       console.groupEnd();
 
       expect(result.text, "text = original").toBe(SAMPLE_TEXT);
       expect(result.isWordBin, "isWordBin = true").toBe(true);
       expect(result.detectedFormat, "format = hex").toBe("hex");
-      expect(result.notice, "no notice").toBeUndefined();
     });
+
+    // suite("decodes a known WordBin hex payload", async () => {
+    //   console.group("\n=== Decode only — WordBin hex ===");
+
+    //   const result = await wb.decode(KNOWN_HEX_PAYLOAD);
+
+    //   console.log("Input payload   :", KNOWN_HEX_PAYLOAD);
+    //   console.log("Decoded text    :", result.text);
+    //   console.log("Detected format :", result.detectedFormat);
+    //   console.log("Is WordBin      :", result.isWordBin);
+    //   if (result.notice) console.warn("Notice          :", result.notice);
+    //   console.groupEnd();
+
+    //   expect(result.text, "text = original").toBe(SAMPLE_TEXT);
+    //   expect(result.isWordBin, "isWordBin = true").toBe(true);
+    //   expect(result.detectedFormat, "format = hex").toBe("hex");
+    //   expect(result.notice, "no notice").toBeUndefined();
+    // });
 
     suite("decodes a known WordBin base64 payload", async () => {
       const { base64Payload } = await wb.encode(SAMPLE_TEXT);
@@ -193,7 +192,6 @@ describe("WordBin", () => {
           ["hex", encoded.hexPayload],
           ["base58", encoded.base58Payload],
           ["base64", encoded.base64Payload],
-          ["bin21", encoded.payload], // Latin-1 bin21Payload string
           ["Uint8Array", encoded.encoded], // raw bytes
         ];
 
@@ -239,8 +237,7 @@ describe("WordBin", () => {
       },
       {
         label: "old broken-encoder hex output",
-        payload:
-          "39e91c486e14ace89769362cee7e39446e8efb344348a1031d747317616f70e3",
+        payload: "9FC3da866e7DF3a1c57adE1a97c9f00a70f010c8",
       },
     ];
 

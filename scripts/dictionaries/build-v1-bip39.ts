@@ -38,7 +38,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const outPath = resolve(outDir, "wordbin-v1-bip39.json");
+  const outPath = resolve(outDir, "dict-v1-bip39.json");
 
   try {
     const json = JSON.stringify(dict, null, 2);

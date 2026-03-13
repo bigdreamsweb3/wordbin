@@ -1,0 +1,248 @@
+{
+  "_comment": "This JSON contains 1-byte ASCII-1 characters (U+0020 to U+007E) with their Unicode code, character, name, and description.",
+  "codes": {
+    "0020": { "char": " ", "name": "space", "description": "SPACE" },
+    "0021": {
+      "char": "!",
+      "name": "exclam",
+      "description": "EXCLAMATION MARK"
+    },
+    "0022": {
+      "char": "\"",
+      "name": "quotedbl",
+      "description": "QUOTATION MARK"
+    },
+    "0023": { "char": "#", "name": "numbersign", "description": "NUMBER SIGN" },
+    "0024": { "char": "$", "name": "dollar", "description": "DOLLAR SIGN" },
+    "0025": { "char": "%", "name": "percent", "description": "PERCENT SIGN" },
+    "0026": { "char": "&", "name": "ampersand", "description": "AMPERSAND" },
+    "0027": { "char": "'", "name": "quotesingle", "description": "APOSTROPHE" },
+    "0028": {
+      "char": "(",
+      "name": "parenleft",
+      "description": "LEFT PARENTHESIS"
+    },
+    "0029": {
+      "char": ")",
+      "name": "parenright",
+      "description": "RIGHT PARENTHESIS"
+    },
+    "002A": { "char": "*", "name": "asterisk", "description": "ASTERISK" },
+    "002B": { "char": "+", "name": "plus", "description": "PLUS SIGN" },
+    "002C": { "char": ",", "name": "comma", "description": "COMMA" },
+    "002D": { "char": "-", "name": "hyphen", "description": "HYPHEN-MINUS" },
+    "002E": { "char": ".", "name": "period", "description": "FULL STOP" },
+    "002F": { "char": "/", "name": "slash", "description": "SOLIDUS" },
+    "0030": { "char": "0", "name": "zero", "description": "DIGIT ZERO" },
+    "0031": { "char": "1", "name": "one", "description": "DIGIT ONE" },
+    "0032": { "char": "2", "name": "two", "description": "DIGIT TWO" },
+    "0033": { "char": "3", "name": "three", "description": "DIGIT THREE" },
+    "0034": { "char": "4", "name": "four", "description": "DIGIT FOUR" },
+    "0035": { "char": "5", "name": "five", "description": "DIGIT FIVE" },
+    "0036": { "char": "6", "name": "six", "description": "DIGIT SIX" },
+    "0037": { "char": "7", "name": "seven", "description": "DIGIT SEVEN" },
+    "0038": { "char": "8", "name": "eight", "description": "DIGIT EIGHT" },
+    "0039": { "char": "9", "name": "nine", "description": "DIGIT NINE" },
+    "003A": { "char": ":", "name": "colon", "description": "COLON" },
+    "003B": { "char": ";", "name": "semicolon", "description": "SEMICOLON" },
+    "003C": { "char": "<", "name": "less", "description": "LESS-THAN SIGN" },
+    "003D": { "char": "=", "name": "equal", "description": "EQUALS SIGN" },
+    "003E": {
+      "char": ">",
+      "name": "greater",
+      "description": "GREATER-THAN SIGN"
+    },
+    "003F": { "char": "?", "name": "question", "description": "QUESTION MARK" },
+    "0040": { "char": "@", "name": "at", "description": "COMMERCIAL AT" },
+    "0041": {
+      "char": "A",
+      "name": "A",
+      "description": "LATIN CAPITAL LETTER A"
+    },
+    "0042": {
+      "char": "B",
+      "name": "B",
+      "description": "LATIN CAPITAL LETTER B"
+    },
+    "0043": {
+      "char": "C",
+      "name": "C",
+      "description": "LATIN CAPITAL LETTER C"
+    },
+    "0044": {
+      "char": "D",
+      "name": "D",
+      "description": "LATIN CAPITAL LETTER D"
+    },
+    "0045": {
+      "char": "E",
+      "name": "E",
+      "description": "LATIN CAPITAL LETTER E"
+    },
+    "0046": {
+      "char": "F",
+      "name": "F",
+      "description": "LATIN CAPITAL LETTER F"
+    },
+    "0047": {
+      "char": "G",
+      "name": "G",
+      "description": "LATIN CAPITAL LETTER G"
+    },
+    "0048": {
+      "char": "H",
+      "name": "H",
+      "description": "LATIN CAPITAL LETTER H"
+    },
+    "0049": {
+      "char": "I",
+      "name": "I",
+      "description": "LATIN CAPITAL LETTER I"
+    },
+    "004A": {
+      "char": "J",
+      "name": "J",
+      "description": "LATIN CAPITAL LETTER J"
+    },
+    "004B": {
+      "char": "K",
+      "name": "K",
+      "description": "LATIN CAPITAL LETTER K"
+    },
+    "004C": {
+      "char": "L",
+      "name": "L",
+      "description": "LATIN CAPITAL LETTER L"
+    },
+    "004D": {
+      "char": "M",
+      "name": "M",
+      "description": "LATIN CAPITAL LETTER M"
+    },
+    "004E": {
+      "char": "N",
+      "name": "N",
+      "description": "LATIN CAPITAL LETTER N"
+    },
+    "004F": {
+      "char": "O",
+      "name": "O",
+      "description": "LATIN CAPITAL LETTER O"
+    },
+    "0050": {
+      "char": "P",
+      "name": "P",
+      "description": "LATIN CAPITAL LETTER P"
+    },
+    "0051": {
+      "char": "Q",
+      "name": "Q",
+      "description": "LATIN CAPITAL LETTER Q"
+    },
+    "0052": {
+      "char": "R",
+      "name": "R",
+      "description": "LATIN CAPITAL LETTER R"
+    },
+    "0053": {
+      "char": "S",
+      "name": "S",
+      "description": "LATIN CAPITAL LETTER S"
+    },
+    "0054": {
+      "char": "T",
+      "name": "T",
+      "description": "LATIN CAPITAL LETTER T"
+    },
+    "0055": {
+      "char": "U",
+      "name": "U",
+      "description": "LATIN CAPITAL LETTER U"
+    },
+    "0056": {
+      "char": "V",
+      "name": "V",
+      "description": "LATIN CAPITAL LETTER V"
+    },
+    "0057": {
+      "char": "W",
+      "name": "W",
+      "description": "LATIN CAPITAL LETTER W"
+    },
+    "0058": {
+      "char": "X",
+      "name": "X",
+      "description": "LATIN CAPITAL LETTER X"
+    },
+    "0059": {
+      "char": "Y",
+      "name": "Y",
+      "description": "LATIN CAPITAL LETTER Y"
+    },
+    "005A": {
+      "char": "Z",
+      "name": "Z",
+      "description": "LATIN CAPITAL LETTER Z"
+    },
+    "005B": {
+      "char": "[",
+      "name": "bracketleft",
+      "description": "LEFT SQUARE BRACKET"
+    },
+    "005C": {
+      "char": "\\",
+      "name": "backslash",
+      "description": "REVERSE SOLIDUS"
+    },
+    "005D": {
+      "char": "]",
+      "name": "bracketright",
+      "description": "RIGHT SQUARE BRACKET"
+    },
+    "005E": {
+      "char": "^",
+      "name": "asciicircum",
+      "description": "CIRCUMFLEX ACCENT"
+    },
+    "005F": { "char": "_", "name": "underscore", "description": "LOW LINE" },
+    "0060": { "char": "`", "name": "grave", "description": "GRAVE ACCENT" },
+    "0061": { "char": "a", "name": "a", "description": "LATIN SMALL LETTER A" },
+    "0062": { "char": "b", "name": "b", "description": "LATIN SMALL LETTER B" },
+    "0063": { "char": "c", "name": "c", "description": "LATIN SMALL LETTER C" },
+    "0064": { "char": "d", "name": "d", "description": "LATIN SMALL LETTER D" },
+    "0065": { "char": "e", "name": "e", "description": "LATIN SMALL LETTER E" },
+    "0066": { "char": "f", "name": "f", "description": "LATIN SMALL LETTER F" },
+    "0067": { "char": "g", "name": "g", "description": "LATIN SMALL LETTER G" },
+    "0068": { "char": "h", "name": "h", "description": "LATIN SMALL LETTER H" },
+    "0069": { "char": "i", "name": "i", "description": "LATIN SMALL LETTER I" },
+    "006A": { "char": "j", "name": "j", "description": "LATIN SMALL LETTER J" },
+    "006B": { "char": "k", "name": "k", "description": "LATIN SMALL LETTER K" },
+    "006C": { "char": "l", "name": "l", "description": "LATIN SMALL LETTER L" },
+    "006D": { "char": "m", "name": "m", "description": "LATIN SMALL LETTER M" },
+    "006E": { "char": "n", "name": "n", "description": "LATIN SMALL LETTER N" },
+    "006F": { "char": "o", "name": "o", "description": "LATIN SMALL LETTER O" },
+    "0070": { "char": "p", "name": "p", "description": "LATIN SMALL LETTER P" },
+    "0071": { "char": "q", "name": "q", "description": "LATIN SMALL LETTER Q" },
+    "0072": { "char": "r", "name": "r", "description": "LATIN SMALL LETTER R" },
+    "0073": { "char": "s", "name": "s", "description": "LATIN SMALL LETTER S" },
+    "0074": { "char": "t", "name": "t", "description": "LATIN SMALL LETTER T" },
+    "0075": { "char": "u", "name": "u", "description": "LATIN SMALL LETTER U" },
+    "0076": { "char": "v", "name": "v", "description": "LATIN SMALL LETTER V" },
+    "0077": { "char": "w", "name": "w", "description": "LATIN SMALL LETTER W" },
+    "0078": { "char": "x", "name": "x", "description": "LATIN SMALL LETTER X" },
+    "0079": { "char": "y", "name": "y", "description": "LATIN SMALL LETTER Y" },
+    "007A": { "char": "z", "name": "z", "description": "LATIN SMALL LETTER Z" },
+    "007B": {
+      "char": "{",
+      "name": "braceleft",
+      "description": "LEFT CURLY BRACKET"
+    },
+    "007C": { "char": "|", "name": "bar", "description": "VERTICAL LINE" },
+    "007D": {
+      "char": "}",
+      "name": "braceright",
+      "description": "RIGHT CURLY BRACKET"
+    },
+    "007E": { "char": "~", "name": "asciitilde", "description": "TILDE" }
+  }
+}

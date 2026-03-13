@@ -22,7 +22,6 @@ Saved  : 38 bytes  —  47% of original size
 Hex    : 0108c424409e363270f7d64deba55e2e11ba716eba59926de2f50282599fc5afd1a8
 Base58 : 2MepGpLHGPPmnrdzjmpqet2XFQ2YGMSpQoDXDex7toUBdZ
 Base64 : AQjEJECeNjJw99ZN66VeLhG6cW66WZJt4vUCglmfxa/RqA==
-Bin21  : ☺◄Ä$@ž6rp÷ÖMë¥^.►ºqnºY™mâõ☻™Å¯Ñ¨
 
 Decoded: "stock ridge avoid school honey trap wait wheel worry face differ wedding" ✓
 ```
@@ -34,7 +33,7 @@ Decoded: "stock ridge avoid school honey trap wait wheel worry face differ weddi
 - **40–70% size reduction** on typical short phrases
 - **Deterministic** — same input + same dictionary = same output, every time
 - **Lossless** — decode is always a perfect round-trip
-- **Universal decoder** — accepts hex, Base58, Base64, Bin21, or raw bytes; format is auto-detected
+- **Universal decoder** — accepts hex, Base58, Base64, or raw bytes; format is auto-detected
 - **Resilient** — non-WordBin payloads are never rejected; partial word extraction is attempted before falling back gracefully
 - **No runtime dependencies** — works in Node.js and the browser
 - **Flexible dictionaries** — BIP-39 (v1, bundled), large English (v2), or custom wordlists
@@ -67,7 +66,7 @@ const encoded = await wb.encode(phrase);
 console.log(encoded.hexPayload); // standard hex string
 console.log(encoded.base58Payload); // Base58 string
 console.log(encoded.base64Payload); // Base64 string
-console.log(encoded.payload); // Bin21 (1 char per byte, most compact printable form)
+console.log(encoded.payload); // hex payload (primary)
 console.log(encoded.encodedBytes); // 34
 console.log(encoded.originalBytes); // 72
 console.log(encoded.ratioPercent); // 47.22
@@ -76,7 +75,7 @@ console.log(encoded.ratioPercent); // 47.22
 const r1 = await wb.decode(encoded.hexPayload); // DetectedFormat: "hex"
 const r2 = await wb.decode(encoded.base58Payload); // DetectedFormat: "base58"
 const r3 = await wb.decode(encoded.base64Payload); // DetectedFormat: "base64"
-const r4 = await wb.decode(encoded.payload); // DetectedFormat: "bin21"
+const r4 = await wb.decode(encoded.payload); // DetectedFormat: "hex"
 const r5 = await wb.decode(encoded.encoded); // DetectedFormat: "bytes" (Uint8Array)
 
 console.log(r1.text); // "stock ridge avoid school honey trap..."
@@ -101,15 +100,14 @@ console.log(r1.isWordBin); // true
 
 WordBin produces four interchangeable representations of the same encoded bytes. Pass any of them to `decode()` — the format is detected automatically.
 
-| Format     | Field           | Description                            | Size                             |
-| ---------- | --------------- | -------------------------------------- | -------------------------------- |
-| **Hex**    | `hexPayload`    | Lowercase hex, 2 chars per byte        | 2× raw                           |
-| **Base58** | `base58Payload` | URL-safe, no ambiguous chars (0/O/I/l) | ~1.4× raw                        |
-| **Base64** | `base64Payload` | Standard Base64 with `=` padding       | ~1.33× raw                       |
-| **Bin21**  | `payload`       | Latin-1 string, 1 char per byte        | 1× raw — smallest printable form |
-| **Bytes**  | `encoded`       | Raw `Uint8Array`                       | 1× raw                           |
+| Format     | Field           | Description                            | Size       |
+| ---------- | --------------- | -------------------------------------- | ---------- |
+| **Hex**    | `hexPayload`    | Lowercase hex, 2 chars per byte        | 2× raw     |
+| **Base58** | `base58Payload` | URL-safe, no ambiguous chars (0/O/I/l) | ~1.4× raw  |
+| **Base64** | `base64Payload` | Standard Base64 with `=` padding       | ~1.33× raw |
+| **Bytes**  | `encoded`       | Raw `Uint8Array`                       | 1× raw     |
 
-> **Bin21** is WordBin's signature format: each encoded byte maps to exactly one character. No expansion. A 34-byte payload is a 34-character string.
+> `payload` is now hex (lowercase, two characters per byte). A 34-byte payload is a 68-character hex string.
 
 ---
 
@@ -121,7 +119,7 @@ WordBin produces four interchangeable representations of the same encoded bytes.
 interface DecodeResult {
   text: string; // decoded words, or best-effort extraction
   isWordBin: boolean; // true = valid WordBin payload, perfectly decoded
-  detectedFormat: PayloadFormat; // "hex" | "base58" | "base64" | "bin21" | "bytes"
+  detectedFormat: PayloadFormat; // "hex" | "base58" | "base64" | "bytes"
   notice?: string; // present when payload is not a valid WordBin stream
   rawSegments?: string[]; // unmatched bytes shown as [0xXX], non-WordBin only
 }
@@ -133,7 +131,7 @@ interface DecodeResult {
 Payload received
       │
       ▼
-Format detection ──── hex / base58 / base64 / bin21 / bytes
+Format detection ──── hex / base58 / base64 / bytes
       │
       ▼
 Strict WordBin parse (all installed dictionary versions)
@@ -164,7 +162,7 @@ console.log(result.rawSegments); // ["[0x48]", "[0x65]", ...] — unmatched byte
 1. **Version header** — first byte identifies the dictionary version (`0x01` for v1)
 2. **Dictionary lookup** — each word in the phrase is replaced by its compact binary ID (1–4 bytes)
 3. **Literal fallback** — words not in the dictionary are stored as `varint length + UTF-8 bytes`
-4. **Payload representations** — the raw bytes are encoded into hex, Base58, Base64, and Bin21
+4. **Payload representations** — the raw bytes are encoded into hex, Base58, and Base64
 
 Payloads are **self-describing** (the version byte is embedded) and **fully lossless**.
 
@@ -329,14 +327,14 @@ The `./data/` directory is gitignored. Built dictionaries are loaded automatical
 
 The most common contribution points:
 
-| What you want to change                    | Where to look                                            |
-| ------------------------------------------ | -------------------------------------------------------- |
-| Encode / decode logic                      | `src/core/wordbin.ts`                                    |
-| Format detection (hex/base58/base64/bin21) | `detectAndConvert()` in `wordbin.ts`                     |
-| Dictionary loading / versioning            | `src/dict/dictionary-loader.ts`                          |
-| Dictionary building from a wordlist        | `src/dict/builder.ts`                                    |
-| Buffer utilities (varint, hex, utf8)       | `src/utils/buffer.ts`                                    |
-| Add a new payload format                   | `PayloadFormat` type + `detectAndConvert()` + `encode()` |
+| What you want to change              | Where to look                                            |
+| ------------------------------------ | -------------------------------------------------------- |
+| Encode / decode logic                | `src/core/wordbin.ts`                                    |
+| Format detection (hex/base58/base64) | `detectAndConvert()` in `wordbin.ts`                     |
+| Dictionary loading / versioning      | `src/dict/dictionary-loader.ts`                          |
+| Dictionary building from a wordlist  | `src/dict/builder.ts`                                    |
+| Buffer utilities (varint, hex, utf8) | `src/utils/buffer.ts`                                    |
+| Add a new payload format             | `PayloadFormat` type + `detectAndConvert()` + `encode()` |
 
 ### Submitting a pull request
 
