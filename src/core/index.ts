@@ -420,118 +420,118 @@ export class WordBin {
     return words.join(" ");
   }
 
-  private partialScan(
-    buffer: Uint8Array,
-    startPos: number,
-    reverseMap: Map<string, string>,
-    sortedIdLengths: number[],
-  ): { text: string; wordCount: number; rawSegments: string[] } {
-    const parts: string[] = [];
-    const rawSegments: string[] = [];
-    let wordCount = 0;
-    let pos = startPos;
+  // private partialScan(
+  //   buffer: Uint8Array,
+  //   startPos: number,
+  //   reverseMap: Map<string, string>,
+  //   sortedIdLengths: number[],
+  // ): { text: string; wordCount: number; rawSegments: string[] } {
+  //   const parts: string[] = [];
+  //   const rawSegments: string[] = [];
+  //   let wordCount = 0;
+  //   let pos = startPos;
 
-    while (pos < buffer.length) {
-      if (buffer[pos] === LITERAL && pos + 1 < buffer.length) {
-        try {
-          const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
-          if (byteLen > 0 && byteLen <= 1_000_000) {
-            const start = pos + 1 + bytesRead;
-            const end = start + byteLen;
-            if (end <= buffer.length) {
-              const word = utf8Decode(buffer.subarray(start, end));
-              parts.push(word);
-              wordCount++;
-              pos = end;
-              continue;
-            }
-          }
-        } catch {}
-      }
+  //   while (pos < buffer.length) {
+  //     if (buffer[pos] === LITERAL && pos + 1 < buffer.length) {
+  //       try {
+  //         const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
+  //         if (byteLen > 0 && byteLen <= 1_000_000) {
+  //           const start = pos + 1 + bytesRead;
+  //           const end = start + byteLen;
+  //           if (end <= buffer.length) {
+  //             const word = utf8Decode(buffer.subarray(start, end));
+  //             parts.push(word);
+  //             wordCount++;
+  //             pos = end;
+  //             continue;
+  //           }
+  //         }
+  //       } catch {}
+  //     }
 
-      let matched = false;
-      for (const len of sortedIdLengths) {
-        if (pos + len > buffer.length) continue;
-        const key = toHex(buffer.subarray(pos, pos + len));
-        if (reverseMap.has(key)) {
-          parts.push(reverseMap.get(key)!);
-          wordCount++;
-          pos += len;
-          matched = true;
-          break;
-        }
-      }
+  //     let matched = false;
+  //     for (const len of sortedIdLengths) {
+  //       if (pos + len > buffer.length) continue;
+  //       const key = toHex(buffer.subarray(pos, pos + len));
+  //       if (reverseMap.has(key)) {
+  //         parts.push(reverseMap.get(key)!);
+  //         wordCount++;
+  //         pos += len;
+  //         matched = true;
+  //         break;
+  //       }
+  //     }
 
-      if (!matched) {
-        const marker = `[0x${buffer[pos].toString(16).padStart(2, "0")}]`;
-        parts.push(marker);
-        rawSegments.push(marker);
-        this.log(
-          `[decode] partial scan: no match at pos=${pos} byte=${buffer[pos]}`,
-        );
-        pos++;
-      }
-    }
+  //     if (!matched) {
+  //       const marker = `[0x${buffer[pos].toString(16).padStart(2, "0")}]`;
+  //       parts.push(marker);
+  //       rawSegments.push(marker);
+  //       this.log(
+  //         `[decode] partial scan: no match at pos=${pos} byte=${buffer[pos]}`,
+  //       );
+  //       pos++;
+  //     }
+  //   }
 
-    return { text: parts.join(" "), wordCount, rawSegments };
-  }
+  //   return { text: parts.join(" "), wordCount, rawSegments };
+  // }
 
-  private tryDecode(
-    pos: number,
-    buffer: Uint8Array,
-    reverseMap: Map<string, string>,
-    result: string[],
-    depth: number,
-    sortedIdLengths: number[],
-  ): string | null {
-    if (pos === buffer.length) return result.join(" ");
+  // private tryDecode(
+  //   pos: number,
+  //   buffer: Uint8Array,
+  //   reverseMap: Map<string, string>,
+  //   result: string[],
+  //   depth: number,
+  //   sortedIdLengths: number[],
+  // ): string | null {
+  //   if (pos === buffer.length) return result.join(" ");
 
-    if (buffer[pos] === LITERAL) {
-      let byteLen: number;
-      let bytesRead: number;
-      try {
-        ({ value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1));
-      } catch {
-        byteLen = -1;
-        bytesRead = 0;
-      }
-      if (byteLen > 0) {
-        if (byteLen > 1_000_000 || byteLen < 0) return null;
-        const start = pos + 1 + bytesRead;
-        const end = start + byteLen;
-        if (end > buffer.length) return null;
-        result.push(utf8Decode(buffer.subarray(start, end)));
-        const res = this.tryDecode(
-          end,
-          buffer,
-          reverseMap,
-          result,
-          depth + 1,
-          sortedIdLengths,
-        );
-        if (res !== null) return res;
-        result.pop();
-      }
-    }
+  //   if (buffer[pos] === LITERAL) {
+  //     let byteLen: number;
+  //     let bytesRead: number;
+  //     try {
+  //       ({ value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1));
+  //     } catch {
+  //       byteLen = -1;
+  //       bytesRead = 0;
+  //     }
+  //     if (byteLen > 0) {
+  //       if (byteLen > 1_000_000 || byteLen < 0) return null;
+  //       const start = pos + 1 + bytesRead;
+  //       const end = start + byteLen;
+  //       if (end > buffer.length) return null;
+  //       result.push(utf8Decode(buffer.subarray(start, end)));
+  //       const res = this.tryDecode(
+  //         end,
+  //         buffer,
+  //         reverseMap,
+  //         result,
+  //         depth + 1,
+  //         sortedIdLengths,
+  //       );
+  //       if (res !== null) return res;
+  //       result.pop();
+  //     }
+  //   }
 
-    for (const len of sortedIdLengths) {
-      if (pos + len > buffer.length) continue;
-      const key = toHex(buffer.subarray(pos, pos + len));
-      if (reverseMap.has(key)) {
-        result.push(reverseMap.get(key)!);
-        const res = this.tryDecode(
-          pos + len,
-          buffer,
-          reverseMap,
-          result,
-          depth + 1,
-          sortedIdLengths,
-        );
-        if (res !== null) return res;
-        result.pop();
-      }
-    }
+  //   for (const len of sortedIdLengths) {
+  //     if (pos + len > buffer.length) continue;
+  //     const key = toHex(buffer.subarray(pos, pos + len));
+  //     if (reverseMap.has(key)) {
+  //       result.push(reverseMap.get(key)!);
+  //       const res = this.tryDecode(
+  //         pos + len,
+  //         buffer,
+  //         reverseMap,
+  //         result,
+  //         depth + 1,
+  //         sortedIdLengths,
+  //       );
+  //       if (res !== null) return res;
+  //       result.pop();
+  //     }
+  //   }
 
-    return null;
-  }
+  //   return null;
+  // }
 }
