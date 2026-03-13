@@ -1,3 +1,5 @@
+// File: src/core/id.ts
+
 import { getIdByteLength } from './tiers.js'
 
 /**

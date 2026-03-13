@@ -57,19 +57,20 @@ import { WordBin } from "@bigdreamsweb3/wordbin";
 
 const wb = await WordBin.create();
 
-const phrase =
-  "stock ridge avoid school honey trap wait wheel worry face differ wedding";
+const phrase = "the quick brown fox jumps over thirteen lazy dogs";
 
 // ── Encode ────────────────────────────────────────────────────────────────────
 const encoded = await wb.encode(phrase);
 
+console.log(encoded.dictVersion); // 2
 console.log(encoded.hexPayload); // standard hex string
 console.log(encoded.base58Payload); // Base58 string
 console.log(encoded.base64Payload); // Base64 string
 console.log(encoded.payload); // hex payload (primary)
-console.log(encoded.encodedBytes); // 34
-console.log(encoded.originalBytes); // 72
-console.log(encoded.ratioPercent); // 47.22
+console.log(encoded.encodedBytes); // 24
+console.log(encoded.originalBytes); // 49
+console.log(encoded.bytesSaved); // 25
+console.log(encoded.ratioPercent); // 48.98
 
 // ── Decode — pass any format, it's auto-detected ──────────────────────────────
 const r1 = await wb.decode(encoded.hexPayload); // DetectedFormat: "hex"
@@ -78,7 +79,7 @@ const r3 = await wb.decode(encoded.base64Payload); // DetectedFormat: "base64"
 const r4 = await wb.decode(encoded.payload); // DetectedFormat: "hex"
 const r5 = await wb.decode(encoded.encoded); // DetectedFormat: "bytes" (Uint8Array)
 
-console.log(r1.text); // "stock ridge avoid school honey trap..."
+console.log(r1.text); // "the quick brown fox jumps over..."
 console.log(r1.isWordBin); // true
 ```
 
@@ -148,11 +149,14 @@ Strict WordBin parse (all installed dictionary versions)
 
 ```ts
 // Non-WordBin payload — still handled gracefully
-const result = await wb.decode("48656c6c6f20576f726c64"); // "Hello World" as hex
+const result = await wb.decode("68656c6c6f20776f726c6421"); // Plain "hello world!" as hex
 
+// console.log("Input payload   :", foreignHex);
+console.log(result.text); // hello world[raw:!]
+console.log(result.detectedFormat); // hex
 console.log(result.isWordBin); // false
 console.log(result.notice); // "This does not appear to be a valid WordBin payload..."
-console.log(result.rawSegments); // ["[0x48]", "[0x65]", ...] — unmatched bytes
+console.log(result.rawSegments); // [ '[raw:!]' ] — unmatched bytes
 ```
 
 ---

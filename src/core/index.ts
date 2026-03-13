@@ -84,6 +84,100 @@ export class WordBin {
     };
   }
 
+  private tryRecoverWordsFromHex(
+    hex: string,
+    reverseMap: Map<string, string>,
+    sortedIdLengths: number[],
+  ): string | null {
+    const bytes = Buffer.from(hex, "hex");
+
+    const recovered = this.greedyDecode(bytes, 0, reverseMap, sortedIdLengths);
+
+    if (recovered && recovered.trim().length > 0) {
+      return recovered;
+    }
+
+    return null;
+  }
+
+  private validateDecodedWords(
+    text: string,
+    forwardMap: Map<string, Uint8Array>,
+    reverseMap: Map<string, string>,
+    sortedIdLengths: number[],
+  ): { text: string; rawSegments: string[] } {
+    const parts: string[] = [];
+    const rawSegments: string[] = [];
+
+    const tokens = text.match(/[a-zA-Z]+|[^\w\s]+|\d+|\s+/g) || [];
+
+    for (const token of tokens) {
+      // spaces remain spaces
+      if (/^\s+$/.test(token)) {
+        parts.push(token);
+        continue;
+      }
+
+      // dictionary word
+      if (/^[a-zA-Z]+$/.test(token)) {
+        const normalized = token.toLowerCase();
+
+        if (forwardMap.has(normalized)) {
+          parts.push(normalized);
+          continue;
+        }
+
+        const hex = bytesToHex(new TextEncoder().encode(token));
+
+        const recovered = this.tryRecoverWordsFromHex(
+          hex,
+          reverseMap,
+          sortedIdLengths,
+        );
+
+        if (recovered) {
+          parts.push(recovered);
+        } else {
+          const raw = `[hex:${hex}]`;
+          parts.push(raw);
+          rawSegments.push(raw);
+        }
+
+        continue;
+      }
+
+      // punctuation
+      if (/^[^\w\s]+$/.test(token)) {
+        const raw = `[raw:${token}]`;
+        parts.push(raw);
+        rawSegments.push(raw);
+        continue;
+      }
+
+      // numbers / unknown tokens
+      const hex = bytesToHex(new TextEncoder().encode(token));
+
+      const recovered = this.tryRecoverWordsFromHex(
+        hex,
+        reverseMap,
+        sortedIdLengths,
+      );
+
+      if (recovered) {
+        parts.push(recovered);
+      } else {
+        const raw = `[hex:${hex}]`;
+        parts.push(raw);
+        rawSegments.push(raw);
+      }
+    }
+
+    return {
+      text: parts.join(""),
+      rawSegments,
+    };
+  }
+
   async encode(
     text: string | EncodeResult | Uint8Array,
     options?: { dictVersion?: number },
@@ -208,83 +302,69 @@ export class WordBin {
       let maps: { reverseMap: Map<string, string>; sortedIdLengths: number[] };
       try {
         maps = await this.getMapsForVersion(ver);
-      } catch (err) {
-        this.log(`[decode] v${ver}: getMapsForVersion threw — ${err}`);
+      } catch {
         continue;
       }
+
       const { reverseMap, sortedIdLengths } = maps;
 
       const r1 = this.greedyDecode(buffer, 1, reverseMap, sortedIdLengths);
-      this.log(
-        `[decode] v${ver} strict(pos=1): ${r1 !== null ? `"${r1}"` : "null"}`,
-      );
+
       if (r1 !== null) {
         const notice =
           versionByte === ver
             ? undefined
-            : `Byte[0]=${versionByte} is not a recognised version header but ` +
-              `decoded successfully with dictionary v${ver}.`;
+            : `Byte[0]=${versionByte} is not a recognised version header but decoded successfully with dictionary v${ver}.`;
+
         return { text: r1, isWordBin: true, detectedFormat, notice };
       }
 
       const r0 = this.greedyDecode(buffer, 0, reverseMap, sortedIdLengths);
-      this.log(
-        `[decode] v${ver} strict(pos=0): ${r0 !== null ? `"${r0}"` : "null"}`,
-      );
+
       if (r0 !== null) {
         return {
           text: r0,
-          isWordBin: true,
+          isWordBin: false,
           detectedFormat,
           notice: `Payload had no version header. Decoded using dictionary v${ver}.`,
         };
       }
     }
 
-    this.log(`[decode] strict parse failed — falling back to partial scan`);
+    this.log(`[decode] strict parse failed — falling back to UTF-8 validation`);
 
-    if (availableVersions.length > 0) {
-      const scanVersion = availableVersions[availableVersions.length - 1];
-      try {
-        const { reverseMap, sortedIdLengths } =
-          await this.getMapsForVersion(scanVersion);
+    // fallback to UTF-8 decode
+    const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
 
-        const scan1 = this.partialScan(buffer, 1, reverseMap, sortedIdLengths);
-        const scan0 = this.partialScan(buffer, 0, reverseMap, sortedIdLengths);
-        const best = scan1.wordCount >= scan0.wordCount ? scan1 : scan0;
+    // validate against dictionary
+    try {
+      const latest = availableVersions[availableVersions.length - 1];
+      const { forwardMap, reverseMap, sortedIdLengths } =
+        await this.getMapsForVersion(latest);
 
-        this.log(
-          `[decode] partial scan(pos=1) words=${scan1.wordCount} raw=${scan1.rawSegments.length}` +
-            ` | scan(pos=0) words=${scan0.wordCount} raw=${scan0.rawSegments.length}`,
-        );
+      const validated = this.validateDecodedWords(
+        utf8Text,
+        forwardMap,
+        reverseMap,
+        sortedIdLengths,
+      );
 
-        const notice =
-          `This does not appear to be a valid WordBin payload. ` +
-          `Partial scan using dictionary v${scanVersion} extracted ` +
-          `${best.wordCount} word(s); ${best.rawSegments.length} byte ` +
-          `sequence(s) had no dictionary match and are shown as [0xXX] markers.`;
-
-        return {
-          text: best.text,
-          isWordBin: false,
-          detectedFormat,
-          rawSegments: best.rawSegments,
-          notice,
-        };
-      } catch {}
+      return {
+        text: validated.text,
+        isWordBin: false,
+        detectedFormat,
+        rawSegments: validated.rawSegments,
+        notice:
+          "Payload is not WordBin. UTF-8 text was recovered and dictionary validation applied.",
+      };
+    } catch {
+      return {
+        text: utf8Text,
+        isWordBin: false,
+        detectedFormat,
+        notice: "Payload decoded as plain UTF-8 text.",
+      };
     }
-
-    const notice =
-      `Could not decode with any available dictionary ` +
-      `(tried: ${availableVersions.join(", ") || "none"}). ` +
-      `Falling back to UTF-8 text decoding.`;
-    this.log(`[decode] ${notice}`);
-    return {
-      text: new TextDecoder("utf-8", { fatal: false }).decode(buffer),
-      isWordBin: false,
-      detectedFormat,
-      notice,
-    };
   }
 
   private greedyDecode(

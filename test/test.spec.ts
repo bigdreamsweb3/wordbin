@@ -13,7 +13,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 //   npx vitest -t "Non-WordBin decode"
 //
 const RUN = {
-  ENCODE_ONLY: false, // encode text → inspect all payload formats
+  ENCODE_ONLY: true, // encode text → inspect all payload formats
   DECODE_ONLY: true, // decode a ready-made payload → inspect result
   ENCODE_THEN_DECODE: false, // full round-trip across all formats
   NON_WORDBIN_DECODE: false, // decode payloads that are NOT WordBin-encoded
@@ -21,8 +21,7 @@ const RUN = {
 
 // ─── Shared fixtures ──────────────────────────────────────────────────────────
 
-const SAMPLE_TEXT =
-  "stock ridge avoid school honey trap wait wheel worry face differ wedding";
+const SAMPLE_TEXT = "the quick brown fox jumps over thirteen lazy dogs";
 
 // A pre-encoded hex payload produced by a previous encode run with the v1 dict.
 // Update this value whenever you rebuild or change the dictionary.
@@ -157,14 +156,15 @@ describe("WordBin", () => {
     });
 
     suite("decodes a non-WordBin payload with best-effort scan", async () => {
-      // Plain "Hello World" as hex — not a WordBin payload
-      const foreignHex = Buffer.from("Hello World", "utf-8").toString("hex");
+      // Plain "hello world!" as hex — not a WordBin payload
+      const foreignHex = "68656c6c6f20776f726c6421";
 
       console.group("\n=== Decode only — non-WordBin hex ===");
       const result = await wb.decode(foreignHex);
       console.log("Input payload   :", foreignHex);
       console.log("Decoded text    :", result.text);
       console.log("Detected format :", result.detectedFormat);
+      console.log(result.rawSegments);
       console.log("Is WordBin      :", result.isWordBin);
       console.log("Raw segments    :", result.rawSegments?.length ?? 0);
       if (result.notice) console.warn("Notice          :", result.notice);
