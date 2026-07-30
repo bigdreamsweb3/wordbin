@@ -15,8 +15,8 @@ import { describe, it, expect, beforeAll } from "vitest";
 const RUN = {
   ENCODE_ONLY: true, // encode text → inspect all payload formats
   DECODE_ONLY: true, // decode a ready-made payload → inspect result
-  ENCODE_THEN_DECODE: false, // full round-trip across all formats
-  NON_WORDBIN_DECODE: false, // decode payloads that are NOT WordBin-encoded
+  ENCODE_THEN_DECODE: true, // full round-trip across all formats
+  NON_WORDBIN_DECODE: true, // decode payloads that are NOT WordBin-encoded
 } as const;
 
 // ─── Shared fixtures ──────────────────────────────────────────────────────────
@@ -262,6 +262,11 @@ describe("WordBin", () => {
         expect(result.text.length, "text is non-empty").toBeGreaterThan(0);
         expect(result.isWordBin, "not a WordBin payload").toBe(false);
         expect(result.notice, "notice explains fallback").toBeDefined();
+        if (label === "random binary Uint8Array") {
+          expect(result.text, "weak random matches stay raw").toBe(
+            "[hex:deadbeef000102]",
+          );
+        }
       });
     }
   });

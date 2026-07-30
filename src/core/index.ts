@@ -5,7 +5,6 @@ import {
   encodeVarint,
   decodeVarint,
   utf8Encode,
-  utf8Decode,
 } from "../utils/buffer.js";
 import type { EncodeResult, WordBinDictionary } from "../types.js";
 import { buildDictionary } from "../dict/builder.js";
@@ -23,19 +22,65 @@ export interface DecodeResult {
   text: string;
   isWordBin: boolean;
   detectedFormat: PayloadFormat;
+  rawHex?: string;
+  recoveryMode?: "strict" | "utf8" | "partial" | "empty";
+  dictionaryVersion?: number;
+  confidence?: number;
+  segments?: DecodeSegment[];
   notice?: string;
   rawSegments?: string[];
+}
+
+export interface DecodeSegment {
+  kind: "header" | "word" | "literal" | "utf8" | "raw";
+  offset: number;
+  length: number;
+  hex: string;
+  text?: string;
+  word?: string;
+  dictionaryVersion?: number;
+}
+
+export interface DecodeOptions {
+  /** Limit best-effort recovery to one installed dictionary version. */
+  dictVersion?: number;
+}
+
+interface DictionaryMaps {
+  reverseMap: Map<string, string>;
+  forwardMap: Map<string, Uint8Array>;
+  sortedIdLengths: number[];
+  idCountByLength: Map<number, number>;
+}
+
+interface RecoveryPath {
+  score: number;
+  matchedBytes: number;
+  wordCount: number;
+  segments: DecodeSegment[];
+}
+
+interface RecoveryCandidate extends RecoveryPath {
+  dictionaryVersion?: number;
 }
 
 export class WordBin {
   private primaryDictVersion: number;
   private log: (...args: any[]) => void;
+  private mapsCache = new Map<number, Promise<DictionaryMaps>>();
 
   constructor(initialDict?: WordBinDictionary, options?: { debug?: boolean }) {
     this.primaryDictVersion = initialDict?.version ?? 1;
     this.log = options?.debug
       ? (...args: any[]) => console.log("[WordBin]", ...args)
       : () => {};
+
+    if (initialDict) {
+      this.mapsCache.set(
+        initialDict.version,
+        Promise.resolve(this.createMaps(initialDict)),
+      );
+    }
   }
 
   static async createFromWords(words: string[]): Promise<WordBin> {
@@ -53,15 +98,11 @@ export class WordBin {
     return new WordBin(await loadLatestDictionary(), options);
   }
 
-  private async getMapsForVersion(version: number): Promise<{
-    reverseMap: Map<string, string>;
-    forwardMap: Map<string, Uint8Array>;
-    sortedIdLengths: number[];
-  }> {
-    const dict = await loadDictionaryByVersion(version);
+  private createMaps(dict: WordBinDictionary): DictionaryMaps {
     const reverseMap = new Map<string, string>();
     const forwardMap = new Map<string, Uint8Array>();
     const idLengths = new Set<number>();
+    const idCountByLength = new Map<number, number>();
 
     for (const [hex, words] of Object.entries(dict.words)) {
       if (!words.length) continue;
@@ -73,6 +114,10 @@ export class WordBin {
       const word = words[0];
       const bytes = Buffer.from(hex, "hex");
       idLengths.add(bytes.length);
+      idCountByLength.set(
+        bytes.length,
+        (idCountByLength.get(bytes.length) ?? 0) + 1,
+      );
       reverseMap.set(hex, word);
       forwardMap.set(word, bytes);
     }
@@ -81,101 +126,25 @@ export class WordBin {
       reverseMap,
       forwardMap,
       sortedIdLengths: Array.from(idLengths).sort((a, b) => b - a),
+      idCountByLength,
     };
   }
 
-  private tryRecoverWordsFromHex(
-    hex: string,
-    reverseMap: Map<string, string>,
-    sortedIdLengths: number[],
-  ): string | null {
-    const bytes = Buffer.from(hex, "hex");
+  private async getMapsForVersion(version: number): Promise<DictionaryMaps> {
+    const cached = this.mapsCache.get(version);
+    if (cached) return cached;
 
-    const recovered = this.greedyDecode(bytes, 0, reverseMap, sortedIdLengths);
+    const loading = loadDictionaryByVersion(version).then((dict) =>
+      this.createMaps(dict),
+    );
+    this.mapsCache.set(version, loading);
 
-    if (recovered && recovered.trim().length > 0) {
-      return recovered;
+    try {
+      return await loading;
+    } catch (error) {
+      this.mapsCache.delete(version);
+      throw error;
     }
-
-    return null;
-  }
-
-  private validateDecodedWords(
-    text: string,
-    forwardMap: Map<string, Uint8Array>,
-    reverseMap: Map<string, string>,
-    sortedIdLengths: number[],
-  ): { text: string; rawSegments: string[] } {
-    const parts: string[] = [];
-    const rawSegments: string[] = [];
-
-    const tokens = text.match(/[a-zA-Z]+|[^\w\s]+|\d+|\s+/g) || [];
-
-    for (const token of tokens) {
-      // spaces remain spaces
-      if (/^\s+$/.test(token)) {
-        parts.push(token);
-        continue;
-      }
-
-      // dictionary word
-      if (/^[a-zA-Z]+$/.test(token)) {
-        const normalized = token.toLowerCase();
-
-        if (forwardMap.has(normalized)) {
-          parts.push(normalized);
-          continue;
-        }
-
-        const hex = bytesToHex(new TextEncoder().encode(token));
-
-        const recovered = this.tryRecoverWordsFromHex(
-          hex,
-          reverseMap,
-          sortedIdLengths,
-        );
-
-        if (recovered) {
-          parts.push(recovered);
-        } else {
-          const raw = `[hex:${hex}]`;
-          parts.push(raw);
-          rawSegments.push(raw);
-        }
-
-        continue;
-      }
-
-      // punctuation
-      if (/^[^\w\s]+$/.test(token)) {
-        const raw = `[raw:${token}]`;
-        parts.push(raw);
-        rawSegments.push(raw);
-        continue;
-      }
-
-      // numbers / unknown tokens
-      const hex = bytesToHex(new TextEncoder().encode(token));
-
-      const recovered = this.tryRecoverWordsFromHex(
-        hex,
-        reverseMap,
-        sortedIdLengths,
-      );
-
-      if (recovered) {
-        parts.push(recovered);
-      } else {
-        const raw = `[hex:${hex}]`;
-        parts.push(raw);
-        rawSegments.push(raw);
-      }
-    }
-
-    return {
-      text: parts.join(""),
-      rawSegments,
-    };
   }
 
   async encode(
@@ -260,7 +229,10 @@ export class WordBin {
     };
   }
 
-  async decode(payload: Uint8Array | string): Promise<DecodeResult> {
+  async decode(
+    payload: Uint8Array | string,
+    options: DecodeOptions = {},
+  ): Promise<DecodeResult> {
     let buffer: Uint8Array;
     let detectedFormat: PayloadFormat;
 
@@ -276,16 +248,25 @@ export class WordBin {
         `firstBytes=[${Array.from(buffer.slice(0, 8)).join(",")}]`,
     );
 
+    const rawHex = toHex(buffer);
+
     if (buffer.length < 1) {
       return {
         text: "",
         isWordBin: false,
         detectedFormat,
-        notice: "Payload is empty — nothing to decode.",
+        rawHex,
+        recoveryMode: "empty",
+        confidence: 0,
+        segments: [],
+        notice: "Payload is empty - nothing to decode.",
       };
     }
 
-    const availableVersions = await getAllAvailableDictionaryVersions();
+    const installedVersions = await getAllAvailableDictionaryVersions();
+    const availableVersions = Array.from(
+      new Set([...installedVersions, ...this.mapsCache.keys()]),
+    ).sort((a, b) => a - b);
     const versionByte = buffer[0];
     const versionIsHeader = availableVersions.includes(versionByte);
 
@@ -294,77 +275,150 @@ export class WordBin {
         `versionByte=${versionByte} isKnownHeader=${versionIsHeader}`,
     );
 
-    const tryOrder = versionIsHeader
-      ? [versionByte, ...availableVersions.filter((v) => v !== versionByte)]
-      : [...availableVersions];
-
-    for (const ver of tryOrder) {
-      let maps: { reverseMap: Map<string, string>; sortedIdLengths: number[] };
+    // Strict streams require a known version byte, at least one token, and a
+    // complete parse with that exact dictionary. Unknown bytes are never
+    // discarded as if they were headers.
+    if (versionIsHeader && buffer.length > 1) {
       try {
-        maps = await this.getMapsForVersion(ver);
+        const { reverseMap, sortedIdLengths } =
+          await this.getMapsForVersion(versionByte);
+        const strictText = this.greedyDecode(
+          buffer,
+          1,
+          reverseMap,
+          sortedIdLengths,
+        );
+
+        if (strictText !== null) {
+          return {
+            text: strictText,
+            isWordBin: true,
+            detectedFormat,
+            rawHex,
+            recoveryMode: "strict",
+            dictionaryVersion: versionByte,
+            confidence: 1,
+          };
+        }
       } catch {
-        continue;
-      }
-
-      const { reverseMap, sortedIdLengths } = maps;
-
-      const r1 = this.greedyDecode(buffer, 1, reverseMap, sortedIdLengths);
-
-      if (r1 !== null) {
-        const notice =
-          versionByte === ver
-            ? undefined
-            : `Byte[0]=${versionByte} is not a recognised version header but decoded successfully with dictionary v${ver}.`;
-
-        return { text: r1, isWordBin: true, detectedFormat, notice };
-      }
-
-      const r0 = this.greedyDecode(buffer, 0, reverseMap, sortedIdLengths);
-
-      if (r0 !== null) {
-        return {
-          text: r0,
-          isWordBin: false,
-          detectedFormat,
-          notice: `Payload had no version header. Decoded using dictionary v${ver}.`,
-        };
+        // Continue into lossless recovery below.
       }
     }
 
-    this.log(`[decode] strict parse failed — falling back to UTF-8 validation`);
+    // Keep readable UTF-8 as a candidate. A complete, high-confidence exact-ID
+    // recovery may still be a better interpretation for a headerless stream.
+    const utf8Text = this.decodeReadableUtf8(buffer);
 
-    // fallback to UTF-8 decode
-    const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+    this.log(`[decode] strict parse failed - starting lossless recovery`);
 
-    // validate against dictionary
-    try {
-      const latest = availableVersions[availableVersions.length - 1];
-      const { forwardMap, reverseMap, sortedIdLengths } =
-        await this.getMapsForVersion(latest);
+    const recoveryVersions = versionIsHeader
+      ? [versionByte]
+      : options.dictVersion !== undefined
+        ? [options.dictVersion]
+        : availableVersions;
+    const startPos = versionIsHeader ? 1 : 0;
+    let best: RecoveryCandidate | null = null;
 
-      const validated = this.validateDecodedWords(
-        utf8Text,
-        forwardMap,
-        reverseMap,
-        sortedIdLengths,
-      );
+    for (const ver of recoveryVersions) {
+      try {
+        const maps = await this.getMapsForVersion(ver);
+        const candidate: RecoveryCandidate = {
+          ...this.partialScan(
+            buffer,
+            startPos,
+            maps,
+            ver,
+            versionIsHeader && ver === versionByte,
+          ),
+          dictionaryVersion: ver,
+        };
 
-      return {
-        text: validated.text,
-        isWordBin: false,
-        detectedFormat,
-        rawSegments: validated.rawSegments,
-        notice:
-          "Payload is not WordBin. UTF-8 text was recovered and dictionary validation applied.",
+        if (best === null || this.isBetterRecovery(candidate, best)) {
+          best = candidate;
+        }
+      } catch {
+        // Missing optional dictionaries never make decode throw.
+      }
+    }
+
+    if (best === null) {
+      best = {
+        score: 0,
+        matchedBytes: 0,
+        wordCount: 0,
+        segments: [this.rawSegment(buffer, 0, buffer.length)],
       };
-    } catch {
+    }
+
+    let segments = this.coalesceRawSegments(best.segments);
+    if (versionIsHeader) {
+      segments = [
+        {
+          kind: "header",
+          offset: 0,
+          length: 1,
+          hex: toHex(buffer.subarray(0, 1)),
+          dictionaryVersion: versionByte,
+        },
+        ...segments,
+      ];
+    }
+
+    const matchedVersion =
+      best.matchedBytes > 0 || versionIsHeader
+        ? best.dictionaryVersion
+        : undefined;
+    const rawSegments = segments
+      .filter((segment) => segment.kind === "raw")
+      .map((segment) => `[hex:${segment.hex}]`);
+    const confidence = this.recoveryConfidence(
+      best,
+      Math.max(0, buffer.length - startPos),
+      versionIsHeader,
+    );
+    const dataLength = Math.max(0, buffer.length - startPos);
+    const isStrongCompleteRecovery =
+      best.matchedBytes === dataLength && confidence >= 0.75;
+
+    if (utf8Text !== null && !isStrongCompleteRecovery) {
       return {
         text: utf8Text,
         isWordBin: false,
         detectedFormat,
-        notice: "Payload decoded as plain UTF-8 text.",
+        rawHex,
+        recoveryMode: "utf8",
+        confidence: 1,
+        segments: [
+          {
+            kind: "utf8",
+            offset: 0,
+            length: buffer.length,
+            hex: rawHex,
+            text: utf8Text,
+          },
+        ],
+        rawSegments: [],
+        notice: "Payload is not WordBin. Exact UTF-8 text was recovered.",
       };
     }
+
+    const notice =
+      best.matchedBytes > 0 && matchedVersion !== undefined
+        ? `Payload is not valid WordBin. Recovered ${best.matchedBytes} exact dictionary byte(s) with dictionary v${matchedVersion}; unmatched bytes are preserved as hex.`
+        : "Payload is not WordBin. No exact dictionary IDs were found; original bytes are preserved as hex.";
+
+    return {
+      text: this.renderRecoveryText(segments),
+      isWordBin: false,
+      detectedFormat,
+      rawHex,
+      recoveryMode: "partial",
+      dictionaryVersion: matchedVersion,
+      confidence,
+      segments,
+      rawSegments,
+      notice,
+    };
   }
 
   private greedyDecode(
@@ -373,165 +427,269 @@ export class WordBin {
     reverseMap: Map<string, string>,
     sortedIdLengths: number[],
   ): string | null {
-    const words: string[] = [];
-    let pos = startPos;
+    if (startPos >= buffer.length) return null;
 
-    while (pos < buffer.length) {
-      if (buffer[pos] === LITERAL) {
-        // Guard against false positives: if the following bytes do not form a
-        // valid varint (truncated or malformed), treat this as NOT a literal
-        // and fall through to ID matching. This avoids misinterpreting an ID
-        // byte that equals `LITERAL` as the start of a literal block.
-        let byteLen: number;
-        let bytesRead: number;
-        try {
-          ({ value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1));
-        } catch {
-          // Not a valid varint — continue to ID matching below.
-          byteLen = -1;
-          bytesRead = 0;
-        }
+    const solutions: Array<string[] | null> = Array(buffer.length + 1).fill(
+      null,
+    );
+    solutions[buffer.length] = [];
 
-        if (byteLen > 0) {
-          if (byteLen > 1_000_000 || byteLen < 0) return null;
-          const start = pos + 1 + bytesRead;
-          const end = start + byteLen;
-          if (end > buffer.length) return null;
-          words.push(utf8Decode(buffer.subarray(start, end)));
-          pos = end;
-          continue;
-        }
+    for (let pos = buffer.length - 1; pos >= startPos; pos--) {
+      // A literal is one possible path, not an unconditional choice: some
+      // legitimate dictionary IDs begin with the literal sentinel byte.
+      const literal = this.readLiteral(buffer, pos);
+      if (literal && solutions[literal.end] !== null) {
+        solutions[pos] = [literal.text, ...solutions[literal.end]!];
       }
 
-      let matched = false;
-      for (const len of sortedIdLengths) {
-        if (pos + len > buffer.length) continue;
-        const key = toHex(buffer.subarray(pos, pos + len));
-        if (reverseMap.has(key)) {
-          words.push(reverseMap.get(key)!);
-          pos += len;
-          matched = true;
-          break;
+      if (solutions[pos] === null) {
+        for (const len of sortedIdLengths) {
+          const end = pos + len;
+          if (end > buffer.length || solutions[end] === null) continue;
+          const word = reverseMap.get(toHex(buffer.subarray(pos, end)));
+          if (word) {
+            solutions[pos] = [word, ...solutions[end]!];
+            break;
+          }
         }
       }
-      if (!matched) return null;
     }
 
-    return words.join(" ");
+    return solutions[startPos]?.join(" ") ?? null;
   }
 
-  // private partialScan(
-  //   buffer: Uint8Array,
-  //   startPos: number,
-  //   reverseMap: Map<string, string>,
-  //   sortedIdLengths: number[],
-  // ): { text: string; wordCount: number; rawSegments: string[] } {
-  //   const parts: string[] = [];
-  //   const rawSegments: string[] = [];
-  //   let wordCount = 0;
-  //   let pos = startPos;
+  private partialScan(
+    buffer: Uint8Array,
+    startPos: number,
+    maps: DictionaryMaps,
+    dictionaryVersion: number,
+    allowLiterals: boolean,
+  ): RecoveryPath {
+    const paths: Array<RecoveryPath | null> = Array(buffer.length + 1).fill(
+      null,
+    );
+    paths[buffer.length] = {
+      score: 0,
+      matchedBytes: 0,
+      wordCount: 0,
+      segments: [],
+    };
 
-  //   while (pos < buffer.length) {
-  //     if (buffer[pos] === LITERAL && pos + 1 < buffer.length) {
-  //       try {
-  //         const { value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1);
-  //         if (byteLen > 0 && byteLen <= 1_000_000) {
-  //           const start = pos + 1 + bytesRead;
-  //           const end = start + byteLen;
-  //           if (end <= buffer.length) {
-  //             const word = utf8Decode(buffer.subarray(start, end));
-  //             parts.push(word);
-  //             wordCount++;
-  //             pos = end;
-  //             continue;
-  //           }
-  //         }
-  //       } catch {}
-  //     }
+    for (let pos = buffer.length - 1; pos >= startPos; pos--) {
+      const rawSuffix = paths[pos + 1]!;
+      let best: RecoveryPath = {
+        ...rawSuffix,
+        segments: [this.rawSegment(buffer, pos, pos + 1), ...rawSuffix.segments],
+      };
 
-  //     let matched = false;
-  //     for (const len of sortedIdLengths) {
-  //       if (pos + len > buffer.length) continue;
-  //       const key = toHex(buffer.subarray(pos, pos + len));
-  //       if (reverseMap.has(key)) {
-  //         parts.push(reverseMap.get(key)!);
-  //         wordCount++;
-  //         pos += len;
-  //         matched = true;
-  //         break;
-  //       }
-  //     }
+      if (allowLiterals) {
+        const literal = this.readLiteral(buffer, pos);
+        const suffix = literal ? paths[literal.end] : null;
+        if (literal && suffix) {
+          const length = literal.end - pos;
+          const candidate: RecoveryPath = {
+            score: suffix.score + 16 + literal.byteLength * 2,
+            matchedBytes: suffix.matchedBytes + length,
+            wordCount: suffix.wordCount + 1,
+            segments: [
+              {
+                kind: "literal",
+                offset: pos,
+                length,
+                hex: toHex(buffer.subarray(pos, literal.end)),
+                text: literal.text,
+                dictionaryVersion,
+              },
+              ...suffix.segments,
+            ],
+          };
+          if (this.isBetterRecovery(candidate, best)) best = candidate;
+        }
+      }
 
-  //     if (!matched) {
-  //       const marker = `[0x${buffer[pos].toString(16).padStart(2, "0")}]`;
-  //       parts.push(marker);
-  //       rawSegments.push(marker);
-  //       this.log(
-  //         `[decode] partial scan: no match at pos=${pos} byte=${buffer[pos]}`,
-  //       );
-  //       pos++;
-  //     }
-  //   }
+      for (const len of maps.sortedIdLengths) {
+        const end = pos + len;
+        if (end > buffer.length || paths[end] === null) continue;
+        const word = maps.reverseMap.get(toHex(buffer.subarray(pos, end)));
+        if (!word) continue;
 
-  //   return { text: parts.join(" "), wordCount, rawSegments };
-  // }
+        const suffix = paths[end]!;
+        const matchScore = this.wordMatchScore(
+          len,
+          maps.idCountByLength.get(len) ?? 1,
+        );
+        if (matchScore <= 0) continue;
+        const candidate: RecoveryPath = {
+          score: suffix.score + matchScore,
+          matchedBytes: suffix.matchedBytes + len,
+          wordCount: suffix.wordCount + 1,
+          segments: [
+            {
+              kind: "word",
+              offset: pos,
+              length: len,
+              hex: toHex(buffer.subarray(pos, end)),
+              word,
+              dictionaryVersion,
+            },
+            ...suffix.segments,
+          ],
+        };
 
-  // private tryDecode(
-  //   pos: number,
-  //   buffer: Uint8Array,
-  //   reverseMap: Map<string, string>,
-  //   result: string[],
-  //   depth: number,
-  //   sortedIdLengths: number[],
-  // ): string | null {
-  //   if (pos === buffer.length) return result.join(" ");
+        if (this.isBetterRecovery(candidate, best)) best = candidate;
+      }
 
-  //   if (buffer[pos] === LITERAL) {
-  //     let byteLen: number;
-  //     let bytesRead: number;
-  //     try {
-  //       ({ value: byteLen, bytesRead } = decodeVarint(buffer, pos + 1));
-  //     } catch {
-  //       byteLen = -1;
-  //       bytesRead = 0;
-  //     }
-  //     if (byteLen > 0) {
-  //       if (byteLen > 1_000_000 || byteLen < 0) return null;
-  //       const start = pos + 1 + bytesRead;
-  //       const end = start + byteLen;
-  //       if (end > buffer.length) return null;
-  //       result.push(utf8Decode(buffer.subarray(start, end)));
-  //       const res = this.tryDecode(
-  //         end,
-  //         buffer,
-  //         reverseMap,
-  //         result,
-  //         depth + 1,
-  //         sortedIdLengths,
-  //       );
-  //       if (res !== null) return res;
-  //       result.pop();
-  //     }
-  //   }
+      paths[pos] = best;
+    }
 
-  //   for (const len of sortedIdLengths) {
-  //     if (pos + len > buffer.length) continue;
-  //     const key = toHex(buffer.subarray(pos, pos + len));
-  //     if (reverseMap.has(key)) {
-  //       result.push(reverseMap.get(key)!);
-  //       const res = this.tryDecode(
-  //         pos + len,
-  //         buffer,
-  //         reverseMap,
-  //         result,
-  //         depth + 1,
-  //         sortedIdLengths,
-  //       );
-  //       if (res !== null) return res;
-  //       result.pop();
-  //     }
-  //   }
+    return (
+      paths[startPos] ?? {
+        score: 0,
+        matchedBytes: 0,
+        wordCount: 0,
+        segments: [],
+      }
+    );
+  }
 
-  //   return null;
-  // }
+  private readLiteral(
+    buffer: Uint8Array,
+    pos: number,
+  ): { text: string; end: number; byteLength: number } | null {
+    if (buffer[pos] !== LITERAL) return null;
+
+    try {
+      const { value: byteLength, bytesRead } = decodeVarint(buffer, pos + 1);
+      if (byteLength <= 0) return null;
+      const canonicalLength = encodeVarint(byteLength);
+      if (
+        canonicalLength.length !== bytesRead ||
+        toHex(canonicalLength) !==
+          toHex(buffer.subarray(pos + 1, pos + 1 + bytesRead))
+      ) {
+        return null;
+      }
+      const start = pos + 1 + bytesRead;
+      const end = start + byteLength;
+      if (end > buffer.length) return null;
+      const text = this.decodeUtf8Exact(buffer.subarray(start, end));
+      return text === null ? null : { text, end, byteLength };
+    } catch {
+      return null;
+    }
+  }
+
+  private decodeUtf8Exact(buffer: Uint8Array): string | null {
+    try {
+      const text = new TextDecoder("utf-8", {
+        fatal: true,
+        ignoreBOM: true,
+      }).decode(buffer);
+      return toHex(utf8Encode(text)) === toHex(buffer) ? text : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private decodeReadableUtf8(buffer: Uint8Array): string | null {
+    const text = this.decodeUtf8Exact(buffer);
+    if (text === null || text.length === 0) return null;
+
+    // Tabs and line breaks are readable; other C0/C1 controls indicate binary.
+    return /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/.test(
+      text,
+    )
+      ? null
+      : text;
+  }
+
+  private rawSegment(
+    buffer: Uint8Array,
+    start: number,
+    end: number,
+  ): DecodeSegment {
+    return {
+      kind: "raw",
+      offset: start,
+      length: end - start,
+      hex: toHex(buffer.subarray(start, end)),
+    };
+  }
+
+  private coalesceRawSegments(segments: DecodeSegment[]): DecodeSegment[] {
+    const merged: DecodeSegment[] = [];
+
+    for (const segment of segments) {
+      const previous = merged[merged.length - 1];
+      if (
+        segment.kind === "raw" &&
+        previous?.kind === "raw" &&
+        previous.offset + previous.length === segment.offset
+      ) {
+        previous.length += segment.length;
+        previous.hex += segment.hex;
+      } else {
+        merged.push({ ...segment });
+      }
+    }
+
+    return merged;
+  }
+
+  private renderRecoveryText(segments: DecodeSegment[]): string {
+    return segments
+      .map((segment) => {
+        switch (segment.kind) {
+          case "header":
+            return `[header:v${segment.dictionaryVersion}]`;
+          case "word":
+            return segment.word!;
+          case "literal":
+          case "utf8":
+            return segment.text!;
+          case "raw":
+            return `[hex:${segment.hex}]`;
+        }
+      })
+      .join(" ");
+  }
+
+  private wordMatchScore(length: number, idCount: number): number {
+    // Reward exact-match information while discounting dense dictionaries and
+    // the freedom to infer another word. Weak v2 two-byte coincidences have a
+    // negative score and remain raw instead of becoming random word salad.
+    return length * 8 - Math.log2(Math.max(1, idCount)) - 4;
+  }
+
+  private isBetterRecovery(
+    candidate: RecoveryPath,
+    current: RecoveryPath,
+  ): boolean {
+    if (Math.abs(candidate.score - current.score) > 1e-9) {
+      return candidate.score > current.score;
+    }
+    if (candidate.matchedBytes !== current.matchedBytes) {
+      return candidate.matchedBytes > current.matchedBytes;
+    }
+    if (candidate.wordCount !== current.wordCount) {
+      return candidate.wordCount < current.wordCount;
+    }
+    return false;
+  }
+
+  private recoveryConfidence(
+    recovery: RecoveryPath,
+    dataLength: number,
+    hasHeader: boolean,
+  ): number {
+    if (recovery.matchedBytes === 0 || dataLength === 0) return 0;
+    const coverage = recovery.matchedBytes / dataLength;
+    const evidenceStrength = Math.min(
+      1,
+      recovery.score / (recovery.matchedBytes * 3),
+    );
+    const contextFactor = hasHeader ? 1 : 0.9;
+    return Math.round(coverage * evidenceStrength * contextFactor * 100) / 100;
+  }
+
 }

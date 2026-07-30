@@ -28,6 +28,40 @@ Decoded: "stock ridge avoid school honey trap wait wheel worry face differ weddi
 
 ---
 
+## Byte-Size Comparison — Seed Phrases & Private Keys
+
+There are three storage options for a 12-word BIP-39 seed phrase:
+
+1. **Raw entropy — 16 bytes** — the smallest possible representation, but not self-describing. To use it you must externally know the wordlist (BIP-39?), derivation path, and coin type. None of that is encoded in the bytes themselves.
+
+2. **WordBin payload — 34 bytes** — self-describing. The version header byte (`0x01`) identifies the dictionary, so the payload can be decoded back to the exact original words with no external context. Smaller than any raw keypair from any chain.
+
+3. **Private keys / keypairs by chain:**
+   - **Ethereum (secp256k1) — 32 bytes** — just the private key scalar. Smaller than WordBin, but not self-describing and not seed-recoverable.
+   - **Solana (ed25519) — 64 bytes** — stores 32 bytes secret scalar + 32 bytes public key concatenated. No seed recovery possible from this alone.
+   - **Bitcoin (secp256k1) — 32 bytes** — same curve as Ethereum, same size.
+   - Any ed25519-based chain (Solana, Aptos, Sui, Near) stores the 64-byte keypair format.
+
+### Base58 String Sizes
+
+- Raw entropy (16 bytes) → ~22 Base58 chars
+- Ethereum/Bitcoin private key (32 bytes) → ~44 Base58 chars
+- WordBin payload (34 bytes) → ~46 Base58 chars (e.g. `2MepGpLHGPPmnrdzjmpqet2XFQ2YGMSpQoDXDex7toUBdZ`)
+- Solana/ed25519 keypair (64 bytes) → ~87 Base58 chars
+
+| Storage format | Raw bytes | Base58 chars | Self-describing | Seed recoverable |
+|---|---|---|---|---|
+| Raw entropy | 16 | ~22 | ❌ | ✓ (with context) |
+| ETH / BTC private key (secp256k1) | 32 | ~44 | ❌ | ❌ |
+| WordBin payload | 34 | ~46 | ✅ | ✅ |
+| SOL / APT / SUI / NEAR keypair (ed25519) | 64 | ~87 | ❌ | ❌ |
+
+### The Tradeoff
+
+WordBin is not the smallest possible encoding — raw entropy wins on bytes, and secp256k1 private keys (32 bytes) are also smaller. But neither is self-describing. WordBin trades a small byte overhead for a fully self-contained, recoverable, human-word-decodable payload. Compared to storing ed25519 keypairs (Solana, Aptos, Sui, Near), WordBin saves ~47%. Compared to secp256k1 keys (Ethereum, Bitcoin), WordBin is 2 bytes larger but adds full self-description and seed recoverability.
+
+---
+
 ## Why WordBin?
 
 - **40–70% size reduction** on typical short phrases
@@ -114,15 +148,24 @@ WordBin produces four interchangeable representations of the same encoded bytes.
 
 ## Decode API
 
-`wb.decode(payload)` always returns a `DecodeResult` — it never throws.
+`wb.decode(payload, options?)` always returns a `DecodeResult` — it never throws.
 
 ```ts
 interface DecodeResult {
   text: string; // decoded words, or best-effort extraction
   isWordBin: boolean; // true = valid WordBin payload, perfectly decoded
   detectedFormat: PayloadFormat; // "hex" | "base58" | "base64" | "bytes"
+  rawHex?: string; // exact original bytes, always present in current results
+  recoveryMode?: "strict" | "utf8" | "partial" | "empty";
+  dictionaryVersion?: number;
+  confidence?: number; // 0–1 confidence in partial dictionary recovery
+  segments?: DecodeSegment[]; // lossless, offset-aware recovery details
   notice?: string; // present when payload is not a valid WordBin stream
-  rawSegments?: string[]; // unmatched bytes shown as [0xXX], non-WordBin only
+  rawSegments?: string[]; // unmatched bytes shown as [hex:...]
+}
+
+interface DecodeOptions {
+  dictVersion?: number; // limit best-effort recovery to one dictionary
 }
 ```
 
@@ -135,28 +178,31 @@ Payload received
 Format detection ──── hex / base58 / base64 / bytes
       │
       ▼
-Strict WordBin parse (all installed dictionary versions)
+Strict WordBin parse (header-selected dictionary)
       │                      │
    Success               Failure
       │                      │
-  isWordBin: true       Partial scan ── extract words where bytes match
-  text: original            │           preserve unmatched bytes as [0xXX]
+  isWordBin: true       Exact UTF-8 candidate + scored recovery
+  text: original            │
+                        Exact word IDs become words
+                        Unmatched bytes become [hex:...]
                         isWordBin: false
-                        notice: explains what happened
 ```
 
-**Any payload is accepted.** If bytes don't match any dictionary, a partial word extraction is attempted across all installed dictionaries. Remaining bytes are preserved as `[0xXX]` markers so nothing is silently discarded.
+**Any payload is accepted.** Strict decoding uses whole-payload backtracking, so variable-length word IDs and IDs beginning with the literal marker are decoded correctly. For non-WordBin binary, recovery evaluates exact dictionary-ID matches across the whole payload and preserves every unmatched byte in deterministic `[hex:...]` segments. Recovery never substitutes invalid bytes with Unicode replacement characters.
+
+Word IDs are truncated hashes, so recovery only accepts exact matches. A nearby hex value is not treated as a nearby word.
 
 ```ts
-// Non-WordBin payload — still handled gracefully
-const result = await wb.decode("68656c6c6f20776f726c6421"); // Plain "hello world!" as hex
+const result = await wb.decode(
+  new Uint8Array([0xde, 0xdf, 0x86, 0x4c, 0xbe]),
+  { dictVersion: 1 },
+);
 
-// console.log("Input payload   :", foreignHex);
-console.log(result.text); // hello world[raw:!]
-console.log(result.detectedFormat); // hex
+console.log(result.text); // [hex:de] abandon [hex:be]
 console.log(result.isWordBin); // false
-console.log(result.notice); // "This does not appear to be a valid WordBin payload..."
-console.log(result.rawSegments); // [ '[raw:!]' ] — unmatched bytes
+console.log(result.rawHex); // dedf864cbe
+console.log(result.rawSegments); // ["[hex:de]", "[hex:be]"]
 ```
 
 ---
